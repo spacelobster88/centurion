@@ -1,0 +1,139 @@
+"""Centurion — the orchestrator engine (Control Plane).
+
+Singleton per process. Manages legions, scheduling, and the event bus.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import uuid
+
+from centurion.agent_types.registry import AgentTypeRegistry
+from centurion.config import CenturionConfig
+from centurion.core.century import CenturyConfig
+from centurion.core.events import EventBus
+from centurion.core.legion import Legion, LegionQuota
+from centurion.core.scheduler import CenturionScheduler
+
+
+class Centurion:
+    """The Centurion engine — commands all legions.
+
+    Usage::
+
+        engine = Centurion()
+        legion = await engine.raise_legion("alpha", name="Research Team")
+        century = await legion.add_century(
+            None,
+            CenturyConfig(agent_type_name="claude_cli", min_legionaries=5),
+            engine.registry,
+            engine.scheduler,
+            engine.event_bus,
+        )
+        futures = [await century.submit_task(p) for p in prompts]
+        results = await asyncio.gather(*futures)
+        await engine.shutdown()
+    """
+
+    def __init__(self, config: CenturionConfig | None = None) -> None:
+        self.config = config or CenturionConfig()
+        self.scheduler = CenturionScheduler(config=self.config)
+        self.registry = AgentTypeRegistry()
+        self.event_bus = EventBus()
+        self.legions: dict[str, Legion] = {}
+        self._register_default_types()
+
+    def _register_default_types(self) -> None:
+        # Lazy imports to avoid circular deps and allow optional deps
+        from centurion.agent_types.claude_cli import ClaudeCliAgentType
+        from centurion.agent_types.claude_api import ClaudeApiAgentType
+        from centurion.agent_types.shell import ShellAgentType
+
+        self.registry.register("claude_cli", ClaudeCliAgentType)
+        self.registry.register("claude_api", ClaudeApiAgentType)
+        self.registry.register("shell", ShellAgentType)
+
+    async def raise_legion(
+        self,
+        legion_id: str | None = None,
+        name: str = "",
+        quota: LegionQuota | None = None,
+    ) -> Legion:
+        """Create a new legion (deployment group)."""
+        legion_id = legion_id or f"legion-{uuid.uuid4().hex[:8]}"
+        if legion_id in self.legions:
+            raise ValueError(f"Legion {legion_id!r} already exists")
+
+        legion = Legion(legion_id=legion_id, name=name, quota=quota)
+        self.legions[legion_id] = legion
+        await self.event_bus.emit(
+            "legion_raised",
+            entity_type="legion",
+            entity_id=legion_id,
+            payload={"name": name},
+        )
+        return legion
+
+    async def disband_legion(self, legion_id: str) -> None:
+        """Disband a legion — terminate all its agents."""
+        legion = self.legions.pop(legion_id, None)
+        if legion is None:
+            raise KeyError(f"Legion {legion_id!r} not found")
+
+        await legion.dismiss_all()
+        await self.event_bus.emit(
+            "legion_disbanded",
+            entity_type="legion",
+            entity_id=legion_id,
+        )
+
+    def get_legion(self, legion_id: str) -> Legion:
+        legion = self.legions.get(legion_id)
+        if legion is None:
+            raise KeyError(f"Legion {legion_id!r} not found")
+        return legion
+
+    def fleet_status(self) -> dict:
+        """Macro-level status of the entire engine."""
+        total_centuries = 0
+        total_legionaries = 0
+        for legion in self.legions.values():
+            total_centuries += len(legion.centuries)
+            total_legionaries += legion.total_legionaries
+
+        return {
+            "total_legions": len(self.legions),
+            "total_centuries": total_centuries,
+            "total_legionaries": total_legionaries,
+            "legions": {lid: l.status_report() for lid, l in self.legions.items()},
+            "hardware": self.scheduler.to_dict(),
+        }
+
+    def hardware_report(self) -> dict:
+        """Hardware resources and scheduling state."""
+        return self.scheduler.to_dict()
+
+    async def shutdown(self) -> None:
+        """Gracefully shut down the entire engine."""
+        # Stop accepting new tasks
+        for legion in self.legions.values():
+            for century in legion.centuries.values():
+                century._running = False
+
+        # Wait for in-progress tasks with a global timeout
+        try:
+            await asyncio.wait_for(self._drain_all(), timeout=60.0)
+        except asyncio.TimeoutError:
+            pass
+
+        # Terminate all agents
+        for legion in list(self.legions.values()):
+            await legion.dismiss_all()
+        self.legions.clear()
+
+    async def _drain_all(self) -> None:
+        """Wait for all task queues to drain."""
+        for legion in self.legions.values():
+            for century in legion.centuries.values():
+                if century.task_queue.qsize() > 0:
+                    await century.task_queue.join()

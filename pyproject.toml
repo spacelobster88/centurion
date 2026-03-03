@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "centurion"
+version = "0.1.0"
+description = "AI Agent Orchestration Engine — spawn and command an army of AI agents with Roman military precision"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+authors = [
+    { name = "Eddie Tong", email = "xinhant@gmail.com" },
+]
+keywords = ["ai", "agent", "orchestration", "llm", "claude"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "anthropic>=0.40.0",
+    "pydantic>=2.10.0",
+    "aiosqlite>=0.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "httpx>=0.28.0",
+]
+
+[project.scripts]
+centurion = "centurion.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/spacelobster88/centurion"
+Repository = "https://github.com/spacelobster88/centurion"
+Issues = "https://github.com/spacelobster88/centurion/issues"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

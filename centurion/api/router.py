@@ -1,0 +1,336 @@
+"""FastAPI router for the Centurion REST API."""
+
+from __future__ import annotations
+
+import asyncio
+import uuid
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, Request
+
+from centurion.api.schemas import (
+    AddCenturyRequest,
+    CenturyResponse,
+    FleetStatusResponse,
+    LegionaryResponse,
+    LegionResponse,
+    RaiseLegionRequest,
+    ScaleRequest,
+    SubmitBatchRequest,
+    SubmitTaskRequest,
+    TaskResponse,
+)
+from centurion.core.century import CenturyConfig
+from centurion.core.engine import Centurion
+from centurion.core.legion import LegionQuota
+
+router = APIRouter(prefix="/api/centurion", tags=["centurion"])
+
+
+def _engine(request: Request) -> Centurion:
+    """Extract the Centurion engine from application state."""
+    return request.app.state.centurion
+
+
+# =========================================================================
+# Fleet
+# =========================================================================
+
+@router.get("/status", response_model=FleetStatusResponse)
+async def fleet_status(request: Request) -> dict[str, Any]:
+    """Return macro-level fleet status."""
+    engine = _engine(request)
+    return engine.fleet_status()
+
+
+@router.get("/hardware")
+async def hardware_status(request: Request) -> dict[str, Any]:
+    """Return hardware resources and scheduling state."""
+    engine = _engine(request)
+    return engine.hardware_report()
+
+
+# =========================================================================
+# Legions
+# =========================================================================
+
+@router.post("/legions", response_model=LegionResponse, status_code=201)
+async def raise_legion(request: Request, body: RaiseLegionRequest) -> dict[str, Any]:
+    """Create (raise) a new legion."""
+    engine = _engine(request)
+    quota = LegionQuota(**body.quota) if body.quota else None
+    try:
+        legion = await engine.raise_legion(
+            legion_id=body.legion_id,
+            name=body.name,
+            quota=quota,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    return legion.status_report()
+
+
+@router.get("/legions", response_model=list[LegionResponse])
+async def list_legions(request: Request) -> list[dict[str, Any]]:
+    """List all active legions."""
+    engine = _engine(request)
+    return [legion.status_report() for legion in engine.legions.values()]
+
+
+@router.get("/legions/{legion_id}", response_model=LegionResponse)
+async def get_legion(request: Request, legion_id: str) -> dict[str, Any]:
+    """Get details for a specific legion."""
+    engine = _engine(request)
+    try:
+        legion = engine.get_legion(legion_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return legion.status_report()
+
+
+@router.delete("/legions/{legion_id}")
+async def disband_legion(request: Request, legion_id: str) -> dict:
+    """Disband (delete) a legion and terminate all its agents."""
+    engine = _engine(request)
+    try:
+        await engine.disband_legion(legion_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return {"status": "disbanded", "legion_id": legion_id}
+
+
+# =========================================================================
+# Centuries
+# =========================================================================
+
+@router.post(
+    "/legions/{legion_id}/centuries",
+    response_model=CenturyResponse,
+    status_code=201,
+)
+async def add_century(
+    request: Request, legion_id: str, body: AddCenturyRequest
+) -> dict[str, Any]:
+    """Add a century to an existing legion."""
+    engine = _engine(request)
+    try:
+        legion = engine.get_legion(legion_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    config = CenturyConfig(
+        agent_type_name=body.agent_type,
+        agent_type_config=body.agent_type_config,
+        min_legionaries=body.min_legionaries,
+        max_legionaries=body.max_legionaries,
+        autoscale=body.autoscale,
+        task_timeout=body.task_timeout,
+    )
+    try:
+        century = await legion.add_century(
+            century_id=body.century_id,
+            config=config,
+            registry=engine.registry,
+            scheduler=engine.scheduler,
+            event_bus=engine.event_bus,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return century.status_report()
+
+
+@router.get("/centuries/{century_id}", response_model=CenturyResponse)
+async def get_century(request: Request, century_id: str) -> dict[str, Any]:
+    """Get details for a specific century."""
+    engine = _engine(request)
+    for legion in engine.legions.values():
+        if century_id in legion.centuries:
+            return legion.centuries[century_id].status_report()
+    raise HTTPException(status_code=404, detail=f"Century {century_id!r} not found")
+
+
+@router.post("/centuries/{century_id}/scale", response_model=CenturyResponse)
+async def scale_century(
+    request: Request, century_id: str, body: ScaleRequest
+) -> dict[str, Any]:
+    """Manually scale a century to a target legionary count."""
+    engine = _engine(request)
+    for legion in engine.legions.values():
+        if century_id in legion.centuries:
+            century = legion.centuries[century_id]
+            await century.scale_to(body.target_count)
+            return century.status_report()
+    raise HTTPException(status_code=404, detail=f"Century {century_id!r} not found")
+
+
+@router.delete("/centuries/{century_id}")
+async def remove_century(request: Request, century_id: str) -> dict:
+    """Remove and dismiss a century."""
+    engine = _engine(request)
+    for legion in engine.legions.values():
+        if century_id in legion.centuries:
+            await legion.remove_century(century_id)
+            return {"status": "dismissed", "century_id": century_id}
+    raise HTTPException(status_code=404, detail=f"Century {century_id!r} not found")
+
+
+# =========================================================================
+# Tasks
+# =========================================================================
+
+@router.post(
+    "/centuries/{century_id}/tasks",
+    response_model=TaskResponse,
+    status_code=201,
+)
+async def submit_task_to_century(
+    request: Request, century_id: str, body: SubmitTaskRequest
+) -> dict[str, Any]:
+    """Submit a task to a specific century."""
+    engine = _engine(request)
+    for legion in engine.legions.values():
+        if century_id in legion.centuries:
+            century = legion.centuries[century_id]
+            task_id = body.task_id or f"task-{uuid.uuid4().hex[:8]}"
+            await century.submit_task(
+                prompt=body.prompt,
+                priority=body.priority,
+                task_id=task_id,
+            )
+            return {
+                "task_id": task_id,
+                "century_id": century_id,
+                "legion_id": legion.id,
+                "prompt": body.prompt,
+                "priority": body.priority,
+                "status": "pending",
+            }
+    raise HTTPException(status_code=404, detail=f"Century {century_id!r} not found")
+
+
+@router.post(
+    "/legions/{legion_id}/tasks",
+    response_model=list[TaskResponse],
+    status_code=201,
+)
+async def submit_batch_to_legion(
+    request: Request, legion_id: str, body: SubmitBatchRequest
+) -> list[dict[str, Any]]:
+    """Submit a batch of tasks distributed across a legion's centuries."""
+    engine = _engine(request)
+    try:
+        legion = engine.get_legion(legion_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+    try:
+        futures = await legion.submit_batch(
+            prompts=body.prompts,
+            priority=body.priority,
+            distribute=body.distribute,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    return [
+        {
+            "task_id": f"task-{uuid.uuid4().hex[:8]}",
+            "century_id": "",
+            "legion_id": legion_id,
+            "prompt": prompt,
+            "priority": body.priority,
+            "status": "pending",
+        }
+        for prompt in body.prompts
+    ]
+
+
+@router.get("/tasks/{task_id}", response_model=TaskResponse)
+async def get_task(request: Request, task_id: str) -> dict[str, Any]:
+    """Get details for a specific task by ID.
+
+    Searches across all legions/centuries for the task.
+    """
+    engine = _engine(request)
+    # If a DB is attached, query from there
+    if hasattr(engine, "db") and engine.db is not None:
+        task = await engine.db.get_task(task_id)
+        if task:
+            return task
+    raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
+
+
+@router.post("/tasks/{task_id}/cancel", status_code=200)
+async def cancel_task(request: Request, task_id: str) -> dict[str, str]:
+    """Request cancellation of a task."""
+    # Task cancellation is best-effort; we mark it cancelled but cannot
+    # interrupt an agent mid-execution.
+    engine = _engine(request)
+    if hasattr(engine, "db") and engine.db is not None:
+        task = await engine.db.get_task(task_id)
+        if task is None:
+            raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
+        if task["status"] in ("completed", "failed", "cancelled"):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Task {task_id!r} is already {task['status']}",
+            )
+        await engine.db.update_task(task_id, status="cancelled")
+        return {"task_id": task_id, "status": "cancelled"}
+    raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
+
+
+# =========================================================================
+# Legionaries
+# =========================================================================
+
+@router.get(
+    "/centuries/{century_id}/legionaries",
+    response_model=list[LegionaryResponse],
+)
+async def list_legionaries(
+    request: Request, century_id: str
+) -> list[dict[str, Any]]:
+    """List all legionaries in a century."""
+    engine = _engine(request)
+    for legion in engine.legions.values():
+        if century_id in legion.centuries:
+            century = legion.centuries[century_id]
+            return [leg.to_dict() for leg in century.legionaries.values()]
+    raise HTTPException(status_code=404, detail=f"Century {century_id!r} not found")
+
+
+@router.get("/legionaries/{legionary_id}", response_model=LegionaryResponse)
+async def get_legionary(
+    request: Request, legionary_id: str
+) -> dict[str, Any]:
+    """Get details for a specific legionary by ID."""
+    engine = _engine(request)
+    for legion in engine.legions.values():
+        for century in legion.centuries.values():
+            if legionary_id in century.legionaries:
+                return century.legionaries[legionary_id].to_dict()
+    raise HTTPException(
+        status_code=404, detail=f"Legionary {legionary_id!r} not found"
+    )
+
+
+# =========================================================================
+# Agent types
+# =========================================================================
+
+@router.get("/agent-types")
+async def list_agent_types(request: Request) -> dict[str, Any]:
+    """List all registered agent types."""
+    engine = _engine(request)
+    types = engine.registry.list_types()
+    return {
+        "agent_types": [
+            {
+                "name": name,
+                "class": cls.__name__,
+                "module": cls.__module__,
+            }
+            for name, cls in types.items()
+        ]
+    }
