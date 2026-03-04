@@ -21,7 +21,7 @@ class ClaudeApiAgentType(AgentType):
     def __init__(
         self,
         model: str = "claude-sonnet-4-6",
-        max_tokens: int = 4096,
+        max_tokens: int = 32768,  # Increased from 4096 for longer context
         api_key: str = "",
         system_prompt: str = "",
     ) -> None:

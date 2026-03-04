@@ -27,6 +27,8 @@ dependencies = [
     "anthropic>=0.40.0",
     "pydantic>=2.10.0",
     "aiosqlite>=0.20.0",
+    "httpx>=0.28.0",
+    "mcp[cli]>=1.0.0",
 ]
 
 [project.optional-dependencies]

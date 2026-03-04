@@ -24,6 +24,19 @@ Centurion supports three deployment modes -- standalone server, embedded FastAPI
 | Praetorian    | Priority task               | High-priority task (lower priority number = first)|
 | Aquilifer     | Event bus                   | Real-time pub-sub event system via WebSocket      |
 
+## Project Stats
+
+| Metric | Value |
+|--------|-------|
+| Source files | 31 |
+| Source lines | ~2,880 |
+| Test files | 22 |
+| Test count | 154+ passing |
+| Test lines | ~3,860 |
+| Agent types | 3 (claude_cli, claude_api, shell) |
+| MCP tools | 17 |
+| REST endpoints | 13 |
+
 ## Quickstart
 
 Install from PyPI:
@@ -114,6 +127,26 @@ All endpoints are served under the configured host and port (default `0.0.0.0:81
 | `POST`   | `/legions/{legion_id}/centuries/{century_id}/scale` | Scale a century to a target size     |
 | `GET`    | `/events`                                        | Recent events (JSON)                    |
 | `WS`     | `/ws/events`                                     | Real-time event stream via WebSocket    |
+
+## MCP Integration
+
+Centurion exposes 17 MCP tools, allowing Claude Code to orchestrate agents directly:
+
+```bash
+# Register as MCP server
+claude mcp add centurion -- python -m centurion.mcp
+```
+
+Key MCP tools: `raise_legion`, `add_century`, `submit_task`, `submit_batch`, `fleet_status`, `scale_century`, `get_hardware`, `disband_legion`, and more.
+
+## Hardware-Aware Scheduling
+
+The scheduler probes available CPU and RAM, then performs admission control before spawning agents. Features:
+
+- **Auto-detection**: Reads CPU cores and available RAM at startup
+- **Headroom reservation**: Keeps `CENTURION_RAM_HEADROOM_GB` (default 2 GB) free for the OS
+- **Throttling**: Automatically pauses agent spawning when resources are tight
+- **Per-agent budgets**: Each agent type declares its CPU/RAM requirements
 
 ## Configuration
 
