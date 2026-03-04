@@ -191,6 +191,10 @@ class Century:
     async def _spawn_legionary(self) -> Legionary | None:
         """Create and register a single legionary."""
         if self.scheduler and not self.scheduler.can_schedule(self.agent_type):
+            logger.warning(
+                "Century %s: spawn rejected by scheduler (insufficient resources)",
+                self.id,
+            )
             if self.event_bus:
                 await self.event_bus.emit(
                     "scheduler_rejected",
@@ -444,7 +448,25 @@ class Century:
                 self.config.max_legionaries - current,
             )
             if self.scheduler:
-                needed = min(needed, self.scheduler.available_slots(self.agent_type))
+                slots = self.scheduler.available_slots(self.agent_type)
+                if slots == 0 and needed > 0:
+                    logger.warning(
+                        "Optio %s: %d tasks queued but no resource slots available "
+                        "(insufficient memory/CPU). Tasks will wait until resources free up.",
+                        self.id, queue_depth,
+                    )
+                    if self.event_bus:
+                        await self.event_bus.emit(
+                            "optio_resource_exhausted",
+                            entity_type="century",
+                            entity_id=self.id,
+                            payload={
+                                "queue_depth": queue_depth,
+                                "needed": needed,
+                                "available_slots": 0,
+                            },
+                        )
+                needed = min(needed, slots)
             if needed > 0:
                 logger.info(
                     "Optio: scaling up",
