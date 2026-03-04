@@ -7,6 +7,7 @@ The autoscaler loop is called the Optio (second-in-command).
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import time
 import uuid
@@ -14,7 +15,16 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from centurion.agent_types.base import AgentResult, AgentType
+from centurion.core.circuit_breaker import CircuitBreaker
+from centurion.core.exceptions import (
+    AgentAPIError,
+    AgentProcessError,
+    CenturionError,
+    TaskTimeoutError,
+)
 from centurion.core.legionary import Legionary, LegionaryStatus
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from centurion.core.events import EventBus
@@ -58,9 +68,10 @@ class Century:
         self.scheduler = scheduler
         self.event_bus = event_bus
         self.legionaries: dict[str, Legionary] = {}
-        self.task_queue: asyncio.PriorityQueue[QueueItem] = asyncio.PriorityQueue()
+        self.task_queue: asyncio.PriorityQueue[QueueItem] = asyncio.PriorityQueue(maxsize=1000)
         self._workers: dict[str, asyncio.Task] = {}
         self._optio_task: asyncio.Task | None = None
+        self._circuit_breaker = CircuitBreaker(name=century_id)
         self._running = False
         self._last_scale_time: float = 0.0
         self._queue_empty_since: float | None = None
@@ -91,7 +102,16 @@ class Century:
         task_id = task_id or f"task-{uuid.uuid4().hex[:8]}"
         loop = asyncio.get_running_loop()
         future: asyncio.Future[AgentResult] = loop.create_future()
-        await self.task_queue.put((priority, time.time(), task_id, prompt, future))
+        try:
+            self.task_queue.put_nowait((priority, time.time(), task_id, prompt, future))
+        except asyncio.QueueFull:
+            if not future.done():
+                future.set_exception(CenturionError(f"Century {self.id} queue full (max 1000)", retryable=True))
+            return future
+        logger.info(
+            "Task submitted",
+            extra={"century_id": self.id, "task_id": task_id, "priority": priority, "queue_depth": self.task_queue.qsize()},
+        )
 
         if self.event_bus:
             await self.event_bus.emit(
@@ -103,7 +123,7 @@ class Century:
         return future
 
     async def dismiss(self) -> None:
-        """Terminate all legionaries and stop workers."""
+        """Terminate all legionaries and stop workers. Fails pending futures."""
         self._running = False
         if self._optio_task:
             self._optio_task.cancel()
@@ -116,6 +136,27 @@ class Century:
         for leg in list(self.legionaries.values()):
             await self._terminate_legionary(leg)
         self.legionaries.clear()
+
+        # Drain the queue and fail all pending futures
+        drained = 0
+        while not self.task_queue.empty():
+            try:
+                _, _, task_id, _, future = self.task_queue.get_nowait()
+                if not future.done():
+                    future.set_exception(
+                        CenturionError(
+                            f"Century {self.id} dismissed; task {task_id} cancelled",
+                            retryable=False,
+                        )
+                    )
+                self.task_queue.task_done()
+                drained += 1
+            except asyncio.QueueEmpty:
+                break
+        if drained:
+            logger.info(
+                "Century %s dismissed: failed %d pending futures", self.id, drained,
+            )
 
     async def scale_to(self, target: int) -> None:
         """Scale legionaries to exact target count."""
@@ -222,6 +263,14 @@ class Century:
                     await self.task_queue.put((priority, time.time(), task_id, prompt, future))
                 break
 
+            # Circuit breaker check: if open, re-queue and wait
+            if not self._circuit_breaker.can_execute():
+                if not future.done():
+                    await self.task_queue.put((priority, time.time(), task_id, prompt, future))
+                self.task_queue.task_done()
+                await asyncio.sleep(1.0)
+                continue
+
             if self.event_bus:
                 await self.event_bus.emit(
                     "task_started",
@@ -235,6 +284,19 @@ class Century:
                 if not future.done():
                     future.set_result(result)
 
+                if result.success:
+                    self._circuit_breaker.record_success()
+                    logger.info(
+                        "Task completed",
+                        extra={"task_id": task_id, "legionary_id": leg_id, "duration_s": result.duration_seconds, "success": True},
+                    )
+                else:
+                    self._circuit_breaker.record_failure()
+                    logger.warning(
+                        "Task failed",
+                        extra={"task_id": task_id, "legionary_id": leg_id, "duration_s": result.duration_seconds, "error": result.error},
+                    )
+
                 event_type = "task_completed" if result.success else "task_failed"
                 if self.event_bus:
                     await self.event_bus.emit(
@@ -247,7 +309,30 @@ class Century:
                             "duration": result.duration_seconds,
                         },
                     )
+            except TaskTimeoutError as exc:
+                self._circuit_breaker.record_failure()
+                logger.warning(
+                    "Task timed out",
+                    extra={"task_id": task_id, "legionary_id": leg_id, "timeout_seconds": exc.timeout_seconds, "error_type": type(exc).__name__},
+                )
+                if not future.done():
+                    future.set_exception(exc)
+            except (AgentProcessError, AgentAPIError) as exc:
+                self._circuit_breaker.record_failure()
+                logger.error(
+                    "Task execution exception",
+                    extra={"task_id": task_id, "legionary_id": leg_id, "error_type": type(exc).__name__, "retryable": exc.retryable},
+                    exc_info=True,
+                )
+                if not future.done():
+                    future.set_exception(exc)
             except Exception as e:
+                self._circuit_breaker.record_failure()
+                logger.error(
+                    "Task execution exception",
+                    extra={"task_id": task_id, "legionary_id": leg_id, "error_type": type(e).__name__},
+                    exc_info=True,
+                )
                 if not future.done():
                     future.set_exception(e)
             finally:
@@ -315,15 +400,33 @@ class Century:
             )
 
     async def _optio_loop(self) -> None:
-        """Autoscaler loop — the Optio. Checks every N seconds."""
+        """Autoscaler loop — the Optio. Must never crash."""
+        consecutive_errors = 0
+        max_consecutive = 5
+
         while self._running:
             try:
                 await asyncio.sleep(self.config.cooldown)
                 if not self._running:
                     break
                 await self._optio_check()
+                consecutive_errors = 0
             except asyncio.CancelledError:
                 break
+            except Exception as exc:
+                consecutive_errors += 1
+                logger.exception(
+                    "Optio %s: unexpected error (%d/%d): %s",
+                    self.id, consecutive_errors, max_consecutive, exc,
+                )
+
+            if consecutive_errors >= max_consecutive:
+                logger.critical(
+                    "Optio %s: %d consecutive errors, backing off 60s",
+                    self.id, consecutive_errors,
+                )
+                await asyncio.sleep(60.0)
+                consecutive_errors = 0
 
     async def _optio_check(self) -> None:
         """Single autoscale evaluation."""
@@ -343,6 +446,10 @@ class Century:
             if self.scheduler:
                 needed = min(needed, self.scheduler.available_slots(self.agent_type))
             if needed > 0:
+                logger.info(
+                    "Optio: scaling up",
+                    extra={"century_id": self.id, "queue_depth": queue_depth, "current_agents": current, "adding": needed},
+                )
                 await self._scale_up(needed)
             return
 
@@ -357,6 +464,10 @@ class Century:
             ):
                 excess = min(idle_count - 1, current - self.config.min_legionaries)
                 if excess > 0:
+                    logger.info(
+                        "Optio: scaling down",
+                        extra={"century_id": self.id, "queue_depth": queue_depth, "current_agents": current, "removing": excess},
+                    )
                     await self._scale_down(excess)
                 self._queue_empty_since = None
         else:

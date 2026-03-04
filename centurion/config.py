@@ -69,6 +69,16 @@ class CenturionConfig:
         default_factory=lambda: os.getenv("CENTURION_CLAUDE_MODEL", "claude-sonnet-4-6")
     )
 
+    # Shutdown
+    shutdown_timeout: float = field(
+        default_factory=lambda: float(os.getenv("CENTURION_SHUTDOWN_TIMEOUT", "60"))
+    )
+
+    # Event buffer
+    event_buffer_size: int = field(
+        default_factory=lambda: int(os.getenv("CENTURION_EVENT_BUFFER_SIZE", "1000"))
+    )
+
     # Server
     host: str = "0.0.0.0"
     port: int = field(

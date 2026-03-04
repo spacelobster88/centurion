@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -9,6 +11,9 @@ from enum import Enum
 from typing import Any
 
 from centurion.agent_types.base import AgentResult, AgentType
+from centurion.core.exceptions import AgentProcessError, TaskTimeoutError
+
+logger = logging.getLogger(__name__)
 
 
 class LegionaryStatus(str, Enum):
@@ -50,28 +55,80 @@ class Legionary:
 
         self.status = LegionaryStatus.BUSY
         self.current_task_id = task_id
+        start_time = time.monotonic()
+        logger.debug("Task started", extra={"legionary_id": self.id, "task_id": task_id})
         try:
             result = await self.agent_type.send_task(self.handle, prompt, timeout)
             result.legionary_id = self.id
             result.task_id = task_id
+            duration = time.monotonic() - start_time
             if result.success:
                 self.tasks_completed += 1
                 self.consecutive_failures = 0
+                logger.info(
+                    "Task completed",
+                    extra={"legionary_id": self.id, "task_id": task_id, "duration_s": round(duration, 3), "success": True},
+                )
             else:
                 self.tasks_failed += 1
                 self.consecutive_failures += 1
+                logger.warning(
+                    "Task failed",
+                    extra={"legionary_id": self.id, "task_id": task_id, "duration_s": round(duration, 3), "error": result.error},
+                )
+                # Classify non-success results into typed exceptions
+                if result.exit_code is not None and result.exit_code != 0:
+                    crash_codes = {-9, -15, 137, 139}
+                    if result.exit_code in crash_codes:
+                        raise AgentProcessError(
+                            result.error or f"Process exited {result.exit_code}",
+                            exit_code=result.exit_code,
+                            stderr=result.error or "",
+                        )
             self.total_duration += result.duration_seconds
             return result
+        except asyncio.TimeoutError:
+            duration = time.monotonic() - start_time
+            self.tasks_failed += 1
+            self.consecutive_failures += 1
+            logger.warning(
+                "Task timed out",
+                extra={"legionary_id": self.id, "task_id": task_id, "duration_s": round(duration, 3), "timeout": timeout},
+            )
+            raise TaskTimeoutError(
+                f"Task {task_id} timed out after {timeout}s",
+                timeout_seconds=timeout,
+            )
+        except TaskTimeoutError:
+            self.tasks_failed += 1
+            self.consecutive_failures += 1
+            # Timeout is transient -- legionary is still usable, do NOT set FAILED
+            raise
+        except AgentProcessError as exc:
+            self.tasks_failed += 1
+            self.consecutive_failures += 1
+            if not exc.retryable:
+                self.status = LegionaryStatus.FAILED
+            logger.warning(
+                "Task execution exception",
+                extra={"legionary_id": self.id, "task_id": task_id, "error_type": type(exc).__name__, "error": str(exc)},
+                exc_info=True,
+            )
+            raise
         except Exception as e:
+            duration = time.monotonic() - start_time
             self.tasks_failed += 1
             self.consecutive_failures += 1
             self.status = LegionaryStatus.FAILED
-            return AgentResult(
-                legionary_id=self.id,
-                task_id=task_id,
-                success=False,
-                error=str(e),
+            logger.warning(
+                "Task execution exception",
+                extra={"legionary_id": self.id, "task_id": task_id, "duration_s": round(duration, 3), "error_type": type(e).__name__, "error": str(e)},
+                exc_info=True,
             )
+            raise AgentProcessError(
+                f"Unexpected error in legionary {self.id}: {e}",
+                exit_code=None,
+            ) from e
         finally:
             self.last_active = time.time()
             if self.status != LegionaryStatus.FAILED:

@@ -3,18 +3,24 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import time
 import uuid
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from centurion.api.schemas import (
     AddCenturyRequest,
+    ComponentStatus,
     CenturyResponse,
     FleetStatusResponse,
+    HealthResponse,
     LegionaryResponse,
     LegionResponse,
     RaiseLegionRequest,
+    ReadinessResponse,
     ScaleRequest,
     SubmitBatchRequest,
     SubmitTaskRequest,
@@ -24,7 +30,115 @@ from centurion.core.century import CenturyConfig
 from centurion.core.engine import Centurion
 from centurion.core.legion import LegionQuota
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/centurion", tags=["centurion"])
+health_router = APIRouter(tags=["health"])
+
+
+# =========================================================================
+# Health check endpoints (mounted at root, outside /api/centurion)
+# =========================================================================
+
+@health_router.get(
+    "/health",
+    response_model=HealthResponse,
+    response_model_exclude_none=True,
+)
+async def liveness() -> HealthResponse:
+    """Liveness probe. Returns 200 if the process is running."""
+    return HealthResponse()
+
+
+@health_router.get(
+    "/health/ready",
+    response_model=ReadinessResponse,
+    response_model_exclude_none=True,
+)
+async def readiness(request: Request) -> JSONResponse:
+    """Readiness probe. Checks all critical subsystems."""
+    components: dict[str, ComponentStatus] = {}
+
+    # --- Engine ---
+    engine = getattr(request.app.state, "centurion", None)
+    if engine is None:
+        components["engine"] = ComponentStatus(
+            status="error", error="Engine not initialized"
+        )
+    else:
+        shutting_down = getattr(engine, "_shutting_down", False)
+        components["engine"] = ComponentStatus(
+            status="error" if shutting_down else "ok",
+            error="Engine is shutting down" if shutting_down else None,
+            legions=len(engine.legions),
+            shutting_down=shutting_down,
+        )
+
+    # --- Scheduler ---
+    scheduler = getattr(engine, "scheduler", None) if engine else None
+    if scheduler is None:
+        components["scheduler"] = ComponentStatus(
+            status="error", error="Scheduler not initialized"
+        )
+    else:
+        try:
+            scheduler.probe_system()
+            components["scheduler"] = ComponentStatus(
+                status="ok",
+                active_agents=scheduler.active_agents,
+                recommended_max=scheduler.recommended_max_agents(),
+            )
+        except Exception as exc:
+            components["scheduler"] = ComponentStatus(
+                status="error", error=str(exc)
+            )
+
+    # --- EventBus ---
+    event_bus = getattr(engine, "event_bus", None) if engine else None
+    if event_bus is None:
+        components["event_bus"] = ComponentStatus(
+            status="error", error="EventBus not initialized"
+        )
+    else:
+        components["event_bus"] = ComponentStatus(
+            status="ok",
+            subscribers=len(event_bus._subscribers),
+            history_size=len(event_bus._history),
+        )
+
+    # --- Database ---
+    db = getattr(engine, "db", None) if engine else None
+    if db is None:
+        components["database"] = ComponentStatus(
+            status="error", error="Database not configured"
+        )
+    else:
+        components["database"] = ComponentStatus(status="ok")
+
+    # --- Aggregate ---
+    all_ok = all(c.status == "ok" for c in components.values())
+    response = ReadinessResponse(
+        status="ready" if all_ok else "not_ready",
+        components=components,
+    )
+    status_code = 200 if all_ok else 503
+    return JSONResponse(
+        content=response.model_dump(exclude_none=True),
+        status_code=status_code,
+    )
+
+
+async def request_logging_middleware(request: Request, call_next):
+    """Log every request with method, path, status_code, and duration_ms."""
+    start = time.monotonic()
+    response = await call_next(request)
+    duration_ms = (time.monotonic() - start) * 1000
+    log_level = logging.WARNING if response.status_code >= 400 else logging.INFO
+    logger.log(
+        log_level,
+        "request: method=%s path=%s status=%d duration_ms=%.1f",
+        request.method, request.url.path, response.status_code, duration_ms,
+    )
+    return response
 
 
 def _engine(request: Request) -> Centurion:
@@ -254,7 +368,11 @@ async def get_task(request: Request, task_id: str) -> dict[str, Any]:
     engine = _engine(request)
     # If a DB is attached, query from there
     if hasattr(engine, "db") and engine.db is not None:
-        task = await engine.db.get_task(task_id)
+        try:
+            task = await engine.db.get_task(task_id)
+        except Exception as exc:
+            logger.error("Database error in get_task: %s", exc)
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable")
         if task:
             return task
     raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
@@ -267,7 +385,11 @@ async def cancel_task(request: Request, task_id: str) -> dict[str, str]:
     # interrupt an agent mid-execution.
     engine = _engine(request)
     if hasattr(engine, "db") and engine.db is not None:
-        task = await engine.db.get_task(task_id)
+        try:
+            task = await engine.db.get_task(task_id)
+        except Exception as exc:
+            logger.error("Database error in cancel_task: %s", exc)
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable")
         if task is None:
             raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
         if task["status"] in ("completed", "failed", "cancelled"):
@@ -275,7 +397,11 @@ async def cancel_task(request: Request, task_id: str) -> dict[str, str]:
                 status_code=409,
                 detail=f"Task {task_id!r} is already {task['status']}",
             )
-        await engine.db.update_task(task_id, status="cancelled")
+        try:
+            await engine.db.update_task(task_id, status="cancelled")
+        except Exception as exc:
+            logger.error("Database error in cancel_task: %s", exc)
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable")
         return {"task_id": task_id, "status": "cancelled"}
     raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
 

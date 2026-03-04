@@ -6,12 +6,16 @@ Uses --dangerously-skip-permissions as required for automated agent spawning.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import time
 from typing import Any, AsyncIterator
 
 from centurion.agent_types.base import AgentResult, AgentType
 from centurion.config import ResourceRequirements, ResourceSpec
+from centurion.core.exceptions import TaskTimeoutError
+
+logger = logging.getLogger(__name__)
 
 
 class ClaudeCliAgentType(AgentType):
@@ -49,7 +53,9 @@ class ClaudeCliAgentType(AgentType):
         clean_env.update(handle.get("env", {}))
 
         cwd = handle.get("cwd", "/tmp")
+        legionary_id = handle.get("legionary_id", "unknown")
         start = time.monotonic()
+        logger.debug("send_task: starting legionary_id=%s cwd=%s", legionary_id, cwd)
 
         proc = await asyncio.create_subprocess_exec(
             *args,
@@ -66,17 +72,33 @@ class ClaudeCliAgentType(AgentType):
                 timeout=timeout,
             )
         except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
-            return AgentResult(
-                success=False,
-                output="",
-                error=f"Task timed out after {timeout}s",
-                exit_code=-1,
-                duration_seconds=time.monotonic() - start,
+            logger.warning("send_task: timeout legionary_id=%s after %.1fs", legionary_id, timeout)
+            # Graceful shutdown: SIGTERM first, then SIGKILL if needed
+            try:
+                proc.terminate()  # SIGTERM
+                await asyncio.wait_for(proc.wait(), timeout=5.0)
+            except (asyncio.TimeoutError, ProcessLookupError):
+                try:
+                    proc.kill()  # SIGKILL
+                    await asyncio.wait_for(proc.wait(), timeout=3.0)
+                except (asyncio.TimeoutError, ProcessLookupError):
+                    pass
+            raise TaskTimeoutError(
+                f"Task timed out after {timeout}s",
+                timeout_seconds=timeout,
             )
 
         elapsed = time.monotonic() - start
+        if proc.returncode != 0:
+            logger.warning(
+                "send_task: failed legionary_id=%s exit_code=%d duration=%.2fs",
+                legionary_id, proc.returncode, elapsed,
+            )
+        else:
+            logger.info(
+                "send_task: completed legionary_id=%s exit_code=0 duration=%.2fs",
+                legionary_id, elapsed,
+            )
         return AgentResult(
             success=proc.returncode == 0,
             output=stdout.decode(errors="replace").strip(),

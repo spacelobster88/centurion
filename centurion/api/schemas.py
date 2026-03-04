@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -117,3 +117,32 @@ class FleetStatusResponse(BaseModel):
     total_legionaries: int = 0
     legions: dict[str, LegionResponse] = Field(default_factory=dict)
     hardware: dict[str, Any] = Field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Health check response models
+# ---------------------------------------------------------------------------
+
+class HealthResponse(BaseModel):
+    """Liveness probe response."""
+    status: Literal["ok"] = "ok"
+
+
+class ComponentStatus(BaseModel):
+    """Status of a single subsystem component."""
+    status: Literal["ok", "error"]
+    error: str | None = None
+    # Optional diagnostic fields (component-specific, ignored if absent)
+    latency_ms: float | None = None
+    active_agents: int | None = None
+    recommended_max: int | None = None
+    subscribers: int | None = None
+    history_size: int | None = None
+    legions: int | None = None
+    shutting_down: bool | None = None
+
+
+class ReadinessResponse(BaseModel):
+    """Readiness probe response."""
+    status: Literal["ready", "not_ready"]
+    components: dict[str, ComponentStatus]

@@ -15,7 +15,7 @@ from typing import AsyncIterator
 import uvicorn
 from fastapi import FastAPI
 
-from centurion.api.router import router
+from centurion.api.router import health_router, router
 from centurion.api.websocket import websocket_endpoint
 from centurion.config import CenturionConfig
 from centurion.core.engine import Centurion
@@ -39,6 +39,7 @@ def main() -> None:
     args = parser.parse_args()
 
     app = FastAPI(title="Centurion", version="0.1.0", lifespan=lifespan)
+    app.include_router(health_router)
     app.include_router(router)
     app.add_api_websocket_route("/api/centurion/events", websocket_endpoint)
     uvicorn.run(app, host=args.host, port=args.port)

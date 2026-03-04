@@ -7,6 +7,7 @@ permissions should be routed through iTerm2 context.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import platform
 import time
@@ -14,6 +15,8 @@ from typing import Any, AsyncIterator
 
 from centurion.agent_types.base import AgentResult, AgentType
 from centurion.config import ResourceRequirements, ResourceSpec
+
+logger = logging.getLogger(__name__)
 
 
 class ShellAgentType(AgentType):
@@ -41,11 +44,13 @@ class ShellAgentType(AgentType):
     async def send_task(self, handle: Any, task: str, timeout: float) -> AgentResult:
         cwd = handle.get("cwd", "/tmp")
         extra_env = handle.get("env", {})
+        legionary_id = handle.get("legionary_id", "unknown")
 
         env = dict(os.environ)
         env.update(extra_env)
 
         start = time.monotonic()
+        logger.debug("send_task: starting legionary_id=%s shell=%s cwd=%s", legionary_id, self.shell, cwd)
 
         proc = await asyncio.create_subprocess_exec(
             self.shell, "-c", task,
@@ -63,6 +68,7 @@ class ShellAgentType(AgentType):
         except asyncio.TimeoutError:
             proc.kill()
             await proc.wait()
+            logger.warning("send_task: timeout legionary_id=%s after %.1fs", legionary_id, timeout)
             return AgentResult(
                 success=False,
                 output="",
@@ -72,6 +78,16 @@ class ShellAgentType(AgentType):
             )
 
         elapsed = time.monotonic() - start
+        if proc.returncode != 0:
+            logger.warning(
+                "send_task: failed legionary_id=%s exit_code=%d duration=%.2fs",
+                legionary_id, proc.returncode, elapsed,
+            )
+        else:
+            logger.info(
+                "send_task: completed legionary_id=%s exit_code=0 duration=%.2fs",
+                legionary_id, elapsed,
+            )
         return AgentResult(
             success=proc.returncode == 0,
             output=stdout.decode(errors="replace").strip(),

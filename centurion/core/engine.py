@@ -6,6 +6,7 @@ Singleton per process. Manages legions, scheduling, and the event bus.
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 
 from centurion.agent_types.registry import AgentTypeRegistry
@@ -14,6 +15,8 @@ from centurion.core.century import CenturyConfig
 from centurion.core.events import EventBus
 from centurion.core.legion import Legion, LegionQuota
 from centurion.core.scheduler import CenturionScheduler
+
+logger = logging.getLogger(__name__)
 
 
 class Centurion:
@@ -39,9 +42,14 @@ class Centurion:
         self.config = config or CenturionConfig()
         self.scheduler = CenturionScheduler(config=self.config)
         self.registry = AgentTypeRegistry()
-        self.event_bus = EventBus()
+        self.event_bus = EventBus(max_history=self.config.event_buffer_size)
         self.legions: dict[str, Legion] = {}
+        self._shutting_down: bool = False
         self._register_default_types()
+        logger.info(
+            "Engine initialized",
+            extra={"config": {"max_agents": self.config.max_agents_hard_limit}},
+        )
 
     def _register_default_types(self) -> None:
         # Lazy imports to avoid circular deps and allow optional deps
@@ -66,6 +74,7 @@ class Centurion:
 
         legion = Legion(legion_id=legion_id, name=name, quota=quota)
         self.legions[legion_id] = legion
+        logger.info("Legion raised", extra={"legion_id": legion_id, "name": name})
         await self.event_bus.emit(
             "legion_raised",
             entity_type="legion",
@@ -81,6 +90,7 @@ class Centurion:
             raise KeyError(f"Legion {legion_id!r} not found")
 
         await legion.dismiss_all()
+        logger.info("Legion disbanded", extra={"legion_id": legion_id})
         await self.event_bus.emit(
             "legion_disbanded",
             entity_type="legion",
@@ -115,21 +125,42 @@ class Centurion:
 
     async def shutdown(self) -> None:
         """Gracefully shut down the entire engine."""
-        # Stop accepting new tasks
+        if self._shutting_down:
+            logger.warning("shutdown: already in progress")
+            return
+
+        self._shutting_down = True
+        timeout = self.config.shutdown_timeout
+        logger.info("shutdown: starting, timeout=%ss", timeout)
+
+        # Phase 1: Stop accepting new tasks
+        logger.info("shutdown: phase 1 — stop accepting new tasks")
         for legion in self.legions.values():
             for century in legion.centuries.values():
                 century._running = False
 
-        # Wait for in-progress tasks with a global timeout
-        try:
-            await asyncio.wait_for(self._drain_all(), timeout=60.0)
-        except asyncio.TimeoutError:
-            pass
+        # Phase 2: Drain all legions
+        logger.info("shutdown: phase 2 — draining legions")
+        legion_ids = list(self.legions.keys())
+        for legion_id in legion_ids:
+            try:
+                await self.disband_legion(legion_id)
+            except KeyError:
+                pass
 
-        # Terminate all agents
+        # Wait for any remaining in-progress tasks with configurable timeout
+        try:
+            await asyncio.wait_for(self._drain_all(), timeout=timeout)
+        except asyncio.TimeoutError:
+            logger.warning("shutdown: drain timed out after %ss", timeout)
+
+        # Terminate any remaining legions
         for legion in list(self.legions.values()):
             await legion.dismiss_all()
         self.legions.clear()
+
+        # Phase 3: Complete
+        logger.info("shutdown: complete")
 
     async def _drain_all(self) -> None:
         """Wait for all task queues to drain."""

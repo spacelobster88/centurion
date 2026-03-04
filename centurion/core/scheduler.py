@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import platform
 import subprocess
+import time
 from dataclasses import dataclass, field
 
 from centurion.agent_types.base import AgentType
 from centurion.config import CenturionConfig, ResourceSpec
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -35,14 +39,18 @@ class CenturionScheduler:
     allocated_cpu: int = 0  # millicores
     allocated_memory: int = 0  # MB
     active_agents: int = 0
+    _probe_cache: SystemResources | None = field(default=None, repr=False)
+    _probe_cache_time: float = field(default=0.0, repr=False)
 
     def probe_system(self) -> SystemResources:
         """Detect current system resources (macOS + Linux)."""
+        if self._probe_cache and (time.monotonic() - self._probe_cache_time) < 5.0:
+            return self._probe_cache
         cpu_count = os.cpu_count() or 1
         ram_total_mb = self._ram_total_mb()
         ram_available_mb = self._ram_available_mb()
         load_1, load_5, load_15 = os.getloadavg()
-        return SystemResources(
+        resources = SystemResources(
             cpu_count=cpu_count,
             ram_total_mb=ram_total_mb,
             ram_available_mb=ram_available_mb,
@@ -50,6 +58,15 @@ class CenturionScheduler:
             load_avg_5=round(load_5, 2),
             load_avg_15=round(load_15, 2),
         )
+        logger.debug(
+            "probe_system: system resources snapshot cpu_count=%d ram_total_mb=%d "
+            "ram_available_mb=%d load_avg=%.2f/%.2f/%.2f",
+            resources.cpu_count, resources.ram_total_mb, resources.ram_available_mb,
+            resources.load_avg_1, resources.load_avg_5, resources.load_avg_15,
+        )
+        self._probe_cache = resources
+        self._probe_cache_time = time.monotonic()
+        return resources
 
     def recommended_max_agents(self, ram_per_agent_mb: int = 250) -> int:
         """Calculate recommended maximum concurrent agents based on hardware."""
@@ -67,13 +84,18 @@ class CenturionScheduler:
         """Check if system has capacity for one more agent of this type."""
         req = agent_type.resource_requirements().requests
         available = self._available_resources()
+        result = True
         if available.cpu_millicores < req.cpu_millicores:
-            return False
-        if available.memory_mb < req.memory_mb:
-            return False
-        if self.config.max_agents_hard_limit > 0 and self.active_agents >= self.config.max_agents_hard_limit:
-            return False
-        return True
+            result = False
+        elif available.memory_mb < req.memory_mb:
+            result = False
+        elif self.config.max_agents_hard_limit > 0 and self.active_agents >= self.config.max_agents_hard_limit:
+            result = False
+        logger.debug(
+            "can_schedule: agent_type=%s result=%s cpu_available=%d memory_available=%d",
+            agent_type.name, result, available.cpu_millicores, available.memory_mb,
+        )
+        return result
 
     def available_slots(self, agent_type: AgentType) -> int:
         """How many more agents of this type can fit."""
@@ -93,6 +115,10 @@ class CenturionScheduler:
         self.allocated_cpu += req.cpu_millicores
         self.allocated_memory += req.memory_mb
         self.active_agents += 1
+        logger.debug(
+            "allocate: agent_type=%s allocated_cpu=%d allocated_memory=%d active_agents=%d",
+            agent_type.name, self.allocated_cpu, self.allocated_memory, self.active_agents,
+        )
 
     def release(self, agent_type: AgentType) -> None:
         """Free resources when an agent terminates."""
@@ -100,6 +126,10 @@ class CenturionScheduler:
         self.allocated_cpu = max(0, self.allocated_cpu - req.cpu_millicores)
         self.allocated_memory = max(0, self.allocated_memory - req.memory_mb)
         self.active_agents = max(0, self.active_agents - 1)
+        logger.debug(
+            "release: agent_type=%s allocated_cpu=%d allocated_memory=%d active_agents=%d",
+            agent_type.name, self.allocated_cpu, self.allocated_memory, self.active_agents,
+        )
 
     def to_dict(self) -> dict:
         system = self.probe_system()

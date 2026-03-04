@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from typing import Any, AsyncIterator
 
 from centurion.agent_types.base import AgentResult, AgentType
 from centurion.config import ResourceRequirements, ResourceSpec
+
+logger = logging.getLogger(__name__)
 
 
 class ClaudeApiAgentType(AgentType):
@@ -52,8 +55,10 @@ class ClaudeApiAgentType(AgentType):
 
         client = anthropic.AsyncAnthropic(api_key=api_key)
         messages = [{"role": "user", "content": task}]
+        legionary_id = handle.get("legionary_id", "unknown")
 
         start = time.monotonic()
+        logger.debug("send_task: starting legionary_id=%s model=%s max_tokens=%d", legionary_id, self.model, self.max_tokens)
         try:
             response = await client.messages.create(
                 model=self.model,
@@ -67,6 +72,11 @@ class ClaudeApiAgentType(AgentType):
             for block in response.content:
                 if block.type == "text":
                     output += block.text
+            logger.info(
+                "send_task: completed legionary_id=%s model=%s duration=%.2fs input_tokens=%d output_tokens=%d",
+                legionary_id, response.model, elapsed,
+                response.usage.input_tokens, response.usage.output_tokens,
+            )
             return AgentResult(
                 success=True,
                 output=output.strip(),
@@ -83,6 +93,7 @@ class ClaudeApiAgentType(AgentType):
             )
         except Exception as e:
             elapsed = time.monotonic() - start
+            logger.warning("send_task: failed legionary_id=%s error=%s duration=%.2fs", legionary_id, e, elapsed)
             return AgentResult(
                 success=False,
                 error=str(e),
