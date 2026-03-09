@@ -1,16 +1,79 @@
 # Centurion
 
-Spawn and command an army of AI agents with Roman military precision.
+**Spawn and command an army of AI agents with Roman military precision.**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://img.shields.io/badge/tests-298%20passing-brightgreen.svg)]()
+[![MCP Tools](https://img.shields.io/badge/MCP%20tools-18-purple.svg)]()
+[![A2A Protocol](https://img.shields.io/badge/A2A-compatible-orange.svg)](https://google.github.io/A2A/)
+[![OpenClaw Compatible](https://img.shields.io/badge/OpenClaw-compatible-red.svg)]()
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-native-blueviolet.svg)]()
 
 ---
 
 ## Overview
 
-Centurion is an AI agent orchestration engine that manages fleets of AI agents at scale. It provides a structured framework for spawning, scheduling, and coordinating multiple AI agents -- whether they are Claude CLI processes, Anthropic API calls, or plain shell commands -- under a unified control plane.
+Centurion is an AI agent orchestration engine that manages fleets of AI agents at scale. While most frameworks stop at 1-2 agents, Centurion scales to **100+ concurrent agents** with hardware-aware scheduling, real-time broadcasting, and five integration methods.
 
-The engine draws its organizational model from the Roman military hierarchy. Agents are grouped into Centuries (squads of the same type sharing a task queue), which belong to Legions (deployment groups with resource quotas). A built-in scheduler inspired by Kubernetes resource management handles admission control, hardware-aware autoscaling, and capacity planning. Each Century includes an Optio (autoscaler) that monitors queue depth and adjusts the number of active agents in real time.
+```
+                          +-----------------------+
+                          |      CENTURION        |
+                          |    Control Plane       |
+                          +----------+------------+
+                                     |
+              +----------------------+----------------------+
+              |                      |                      |
+     +--------v--------+   +--------v--------+   +---------v-------+
+     |   Scheduler      |   |   Broadcaster    |   |   EventBus      |
+     | (K8s-inspired    |   | (all/legion/     |   |  (Aquilifer)     |
+     |  admission ctrl) |   |  century scope)  |   |  WebSocket pub-  |
+     +--------+---------+   +--------+---------+   |  sub events      |
+              |                      |              +---------+-------+
+              +----------------------+                        |
+                          |                                   |
+         +----------------+----------------+                  |
+         |                                 |                  |
++--------v---------+            +----------v--------+        |
+|  Legion "alpha"   |            |  Legion "beta"     |        |
+|  (Research Ops)   |            |  (Build Ops)       |        |
++--------+---------+            +----------+---------+        |
+         |                                 |                  |
+    +----+--------+                   +----+----+             |
+    |             |                   |         |             |
++---v----+  +----v---+          +----v---+ +---v----+        |
+|Century |  |Century |          |Century | |Century |        |
+|claude  |  |claude  |          |shell   | |claude  |        |
+|_cli x5 |  |_api x3 |          |  x10   | |_api x8 |        |
++---+----+  +---+----+          +---+----+ +---+----+        |
+    |           |                   |          |              |
+  L L L L L  L L L              L L L L..  L L L L..         |
+  | | | | |  | | |              | | | |    | | | |           |
+  v v v v v  v v v              v v v v    v v v v           |
+  Legionaries (individual agent instances)     <-- events ---+
+```
 
-Centurion supports **five integration methods** -- REST API, MCP server, Claude Code Skill, A2A protocol, and Python library -- so it fits into any AI agent ecosystem without friction. A WebSocket-based event bus (the Aquilifer) streams lifecycle events in real time, and a **broadcast system** allows you to send instructions to all agents, a specific legion, or a specific century.
+### Why Centurion?
+
+| Feature | CrewAI | AutoGen | LangGraph | Centurion |
+|---------|--------|---------|-----------|-----------|
+| Max practical agents | 2-5 | 2-10 | 2-5 | **100+** |
+| Hardware-aware scheduling | :x: | :x: | :x: | :white_check_mark: |
+| Auto-scaling (Optio) | :x: | :x: | :x: | :white_check_mark: |
+| Admission control (K8s-style) | :x: | :x: | :x: | :white_check_mark: |
+| Real-time event streaming | :x: | :x: | :x: | :white_check_mark: |
+| Fleet broadcasting | :x: | :x: | :x: | :white_check_mark: |
+| MCP server integration | :x: | :x: | :x: | :white_check_mark: |
+| Claude Code native | :x: | :x: | :x: | :white_check_mark: |
+| OpenClaw compatible | :x: | :x: | :x: | :white_check_mark: |
+| A2A protocol (Google) | :x: | :x: | :x: | :white_check_mark: |
+| REST API | :x: | :x: | partial | :white_check_mark: |
+| Circuit breaker / fault tolerance | :x: | :x: | :x: | :white_check_mark: |
+| Multiple agent types | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Python library mode | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Task queuing with priority | :x: | :x: | :x: | :white_check_mark: |
+
+> **CrewAI / AutoGen / LangGraph** are excellent for workflows with 1-5 specialized agents in fixed roles. **Centurion** is built for when you need to scale — 10, 50, or 100+ agents executing tasks in parallel with real-time fleet management.
 
 ## Concepts
 
@@ -135,7 +198,7 @@ Import the engine directly in Python code. See the Programmatic Usage example ab
 
 ## Integration Guide
 
-Centurion supports five integration methods. Pick the one that fits your setup.
+Centurion supports **five integration methods**. Pick the one that fits your setup.
 
 ### 1. REST API
 
@@ -342,25 +405,6 @@ Centurion reads configuration from environment variables with sensible defaults.
 | `CENTURION_CLAUDE_BIN`        | `claude`                   | Path to the Claude CLI binary                    |
 | `CENTURION_CLAUDE_MODEL`      | `claude-sonnet-4-6`        | Default model for Claude API agent type          |
 | `ANTHROPIC_API_KEY`           | (none)                     | Anthropic API key for `claude_api` agent type    |
-
-## Architecture
-
-```
-Centurion (Engine)
- +-- CenturionScheduler (admission control + resource tracking)
- +-- AgentTypeRegistry (claude_cli, claude_api, shell)
- +-- Broadcaster (fleet/legion/century broadcast)
- +-- EventBus (Aquilifer -- pub-sub for lifecycle events)
- +-- A2A Router (Agent-to-Agent protocol)
- +-- Legion "alpha"
- |    +-- Century "search-squad" (claude_cli x 5)
- |    |    +-- Legionary leg-a1b2c3d4 [IDLE]
- |    |    +-- Legionary leg-e5f6g7h8 [BUSY]
- |    |    +-- ...
- |    +-- Century "analysis-squad" (claude_api x 3)
- +-- Legion "beta"
-      +-- Century "build-squad" (shell x 10)
-```
 
 ## Contributing
 
