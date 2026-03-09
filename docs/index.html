@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centurion — AI Agent Orchestration Engine</title>
+  <meta name="description" content="Spawn and command an army of AI agents with Roman military precision. Scale to 100+ concurrent agents with hardware-aware scheduling.">
+  <meta property="og:title" content="Centurion — AI Agent Orchestration Engine">
+  <meta property="og:description" content="Scale to 100+ concurrent AI agents with K8s-inspired scheduling, real-time broadcasting, and 5 integration methods.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://spacelobster88.github.io/centurion/">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --bg2: #12121a;
+      --bg3: #1a1a2e;
+      --gold: #d4a843;
+      --gold-dim: #a8842f;
+      --red: #c0392b;
+      --red-bright: #e74c3c;
+      --green: #27ae60;
+      --blue: #3498db;
+      --purple: #9b59b6;
+      --text: #e8e8f0;
+      --text-dim: #8888a0;
+      --border: #2a2a3e;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { color: var(--gold-dim); text-decoration: underline; }
+    code, pre {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 50% 50%, rgba(212,168,67,0.06) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(192,57,43,0.04) 0%, transparent 40%);
+      animation: pulse 8s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 1; }
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 900px; }
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: rgba(212,168,67,0.1);
+      border: 1px solid rgba(212,168,67,0.3);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      color: var(--gold);
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.5px;
+    }
+    .hero h1 {
+      font-size: clamp(3rem, 8vw, 5.5rem);
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+    .hero h1 span { color: var(--gold); }
+    .hero p.tagline {
+      font-size: 1.3rem;
+      color: var(--text-dim);
+      max-width: 650px;
+      margin: 0 auto 2rem;
+    }
+    .hero-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--gold);
+      color: #000;
+    }
+    .btn-primary:hover { background: var(--gold-dim); text-decoration: none; color: #000; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); text-decoration: none; }
+
+    .hero-stats {
+      display: flex;
+      gap: 3rem;
+      justify-content: center;
+      margin-top: 3rem;
+      flex-wrap: wrap;
+    }
+    .hero-stat { text-align: center; }
+    .hero-stat .num {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--gold);
+      display: block;
+    }
+    .hero-stat .label {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Sections */
+    section {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+    }
+    .section-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      letter-spacing: -1px;
+    }
+    .section-subtitle {
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      margin-bottom: 3rem;
+    }
+
+    /* Success Story */
+    .story-card {
+      background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .story-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--red), var(--gold), var(--green));
+    }
+    .story-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .story-badge {
+      background: rgba(39,174,96,0.15);
+      color: var(--green);
+      padding: 4px 12px;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .story-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .story-desc {
+      color: var(--text-dim);
+      margin-bottom: 2rem;
+      font-size: 1.05rem;
+      line-height: 1.8;
+    }
+    .story-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .metric-card {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .metric-card .val {
+      font-size: 2rem;
+      font-weight: 800;
+      display: block;
+    }
+    .metric-card .val.gold { color: var(--gold); }
+    .metric-card .val.green { color: var(--green); }
+    .metric-card .val.blue { color: var(--blue); }
+    .metric-card .val.purple { color: var(--purple); }
+    .metric-card .val.red { color: var(--red-bright); }
+    .metric-card .desc {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .story-timeline {
+      border-left: 2px solid var(--border);
+      padding-left: 1.5rem;
+      margin-top: 2rem;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 1.2rem;
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -1.75rem;
+      top: 8px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gold);
+    }
+    .timeline-item .time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--gold);
+    }
+    .timeline-item .event {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+    }
+
+    /* Comparison */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    .comparison-table th {
+      text-align: left;
+      padding: 12px 16px;
+      background: var(--bg3);
+      border-bottom: 2px solid var(--gold);
+      font-weight: 600;
+    }
+    .comparison-table th:first-child { border-radius: 8px 0 0 0; }
+    .comparison-table th:last-child { border-radius: 0 8px 0 0; }
+    .comparison-table td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .comparison-table tr:hover td { background: rgba(212,168,67,0.03); }
+    .comparison-table .feature { font-weight: 500; }
+    .check { color: var(--green); font-size: 1.2rem; }
+    .cross { color: #555; font-size: 1.2rem; }
+    .highlight-col {
+      background: rgba(212,168,67,0.05);
+      border-left: 2px solid var(--gold);
+      border-right: 2px solid var(--gold);
+    }
+    .highlight-col-header {
+      background: rgba(212,168,67,0.15) !important;
+      color: var(--gold) !important;
+      border-left: 2px solid var(--gold);
+      border-right: 2px solid var(--gold);
+    }
+
+    /* Features grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: var(--gold); }
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .feature-card h3 {
+      font-size: 1.15rem;
+      margin-bottom: 0.5rem;
+    }
+    .feature-card p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+    }
+
+    /* Integration badges */
+    .integration-row {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 2rem 0;
+    }
+    .int-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+    .int-badge:hover { border-color: var(--gold); }
+    .int-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .int-dot.green { background: var(--green); }
+    .int-dot.blue { background: var(--blue); }
+    .int-dot.purple { background: var(--purple); }
+    .int-dot.gold { background: var(--gold); }
+    .int-dot.red { background: var(--red-bright); }
+
+    /* Code block */
+    .code-block {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      overflow-x: auto;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      margin: 1.5rem 0;
+    }
+    .code-block code { color: var(--text); }
+    .code-comment { color: #6a6a8a; }
+    .code-cmd { color: var(--gold); }
+    .code-flag { color: var(--blue); }
+    .code-str { color: var(--green); }
+
+    /* Architecture */
+    .arch-block {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: var(--text-dim);
+      text-align: center;
+    }
+    .arch-block pre { display: inline-block; text-align: left; }
+
+    /* CTA */
+    .cta-section {
+      text-align: center;
+      padding: 5rem 2rem;
+      background: linear-gradient(180deg, transparent 0%, rgba(212,168,67,0.03) 100%);
+    }
+    .cta-section h2 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+    .cta-section p {
+      color: var(--text-dim);
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Nav */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .logo {
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: var(--gold);
+      letter-spacing: -0.5px;
+    }
+    nav .nav-links { display: flex; gap: 2rem; }
+    nav .nav-links a {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    nav .nav-links a:hover { color: var(--gold); text-decoration: none; }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2.5rem; }
+      .hero-stats { gap: 1.5rem; }
+      .hero-stat .num { font-size: 1.6rem; }
+      nav .nav-links { display: none; }
+      .story-card { padding: 1.5rem; }
+      .comparison-table { font-size: 0.8rem; }
+      .comparison-table td, .comparison-table th { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">CENTURION</div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#story">Case Study</a>
+    <a href="#comparison">Comparison</a>
+    <a href="#integrations">Integrations</a>
+    <a href="https://github.com/spacelobster88/centurion">GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">Open Source &middot; MIT License &middot; Python 3.12+</div>
+    <h1><span>Centurion</span></h1>
+    <p class="tagline">Spawn and command an army of AI agents with Roman military precision. Scale to 100+ concurrent agents with hardware-aware scheduling.</p>
+    <div class="hero-buttons">
+      <a href="https://github.com/spacelobster88/centurion" class="btn btn-primary">
+        View on GitHub
+      </a>
+      <a href="#story" class="btn btn-secondary">
+        See Case Study
+      </a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="num">100+</span>
+        <span class="label">Concurrent Agents</span>
+      </div>
+      <div class="hero-stat">
+        <span class="num">298</span>
+        <span class="label">Tests Passing</span>
+      </div>
+      <div class="hero-stat">
+        <span class="num">5</span>
+        <span class="label">Integration Methods</span>
+      </div>
+      <div class="hero-stat">
+        <span class="num">18</span>
+        <span class="label">MCP Tools</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <h2 class="section-title">Why Centurion?</h2>
+  <p class="section-subtitle">Built for when 1-2 agents isn't enough.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">&#9876;</div>
+      <h3>Roman Military Hierarchy</h3>
+      <p>Organize agents into Legions, Centuries, and Legionaries. Intuitive fleet management at any scale with clear chain of command.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#9881;</div>
+      <h3>K8s-Inspired Scheduling</h3>
+      <p>Admission control, resource requests/limits, and hardware probing. The scheduler knows exactly how many agents your machine can handle.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#128266;</div>
+      <h3>Fleet Broadcasting</h3>
+      <p>Send real-time instructions to all agents, a specific legion, or a specific century. Change agent behavior on the fly.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#128200;</div>
+      <h3>Auto-Scaling (Optio)</h3>
+      <p>Each century has an Optio that monitors queue depth and scales agents up or down in real time. No manual intervention needed.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#9889;</div>
+      <h3>One-Click Quickstart</h3>
+      <p><code>centurion quickstart</code> &mdash; probes hardware, recommends config, creates a fleet, and starts the server. One command.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#128279;</div>
+      <h3>5 Integration Methods</h3>
+      <p>REST API, MCP Server, Claude Code Skill, Google A2A Protocol, and Python Library. Fits into any AI ecosystem.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section>
+  <h2 class="section-title">Architecture</h2>
+  <p class="section-subtitle">Kubernetes meets the Roman Legion.</p>
+  <div class="arch-block">
+<pre>
+                       +-----------------------+
+                       |      CENTURION        |       REST API (/api/centurion/*)
+                       |    Control Plane      |----&gt; MCP Server (18 tools)
+                       +----------+------------+       A2A (/.well-known/agent.json)
+                                  |                    Claude Code Skill
+             +--------------------+--------------------+
+             |                    |                    |
+    +--------v--------+  +-------v--------+  +--------v--------+
+    |   Scheduler      |  |  Broadcaster   |  |   EventBus       |
+    | (K8s admission   |  | (all / legion  |  |  (Aquilifer)     |
+    |  control)        |  |  / century)    |  |  WebSocket pub-  |
+    +---------+--------+  +-------+--------+  |  sub stream      |
+              |                   |           +---------+--------+
+              +-------------------+                     |
+                       |                                |
+      +----------------+----------------+               |
+      |                                 |               |
++-----v------+              +-----------v----+          |
+| Legion     |              | Legion         |          |
+| "alpha"    |              | "beta"         |          |
++-----+------+              +------+---------+          |
+      |                            |                    |
+  +---+---+                   +----+----+               |
+  |       |                   |         |               |
++-v--+ +--v-+              +--v--+ +---v--+             |
+|Cen | |Cen |              |Cen  | |Cen   |             |
+|cli | |api |              |shell| |api   |             |
+|x5  | |x3  |              |x10  | |x8    |             |
++--+-+ +-+--+              +--+--+ +--+---+             |
+   |     |                    |        |                |
+ LLLLL  LLL              LLLLLLLLLL LLLLLLLL  &lt;- events-+
+ |||||  |||              ||||||||||  ||||||||
+ Legionaries (individual agent instances)
+</pre>
+  </div>
+</section>
+
+<!-- SUCCESS STORY -->
+<section id="story">
+  <h2 class="section-title">Case Study</h2>
+  <p class="section-subtitle">Real-world parallel research at scale.</p>
+  <div class="story-card">
+    <div class="story-header">
+      <span class="story-badge">COMPLETED</span>
+      <h3 class="story-title">Researching Top 20 AI Agent Companies in Parallel</h3>
+    </div>
+    <p class="story-desc">
+      We deployed Centurion to research the top 20 AI agent companies simultaneously. Each legionary was assigned one company to analyze &mdash; covering product offerings, funding, team size, tech stack, and competitive positioning. What would take a single agent <strong>4+ hours</strong> sequentially was completed in <strong>12 minutes</strong> with 20 agents running in parallel.
+    </p>
+
+    <div class="story-metrics">
+      <div class="metric-card">
+        <span class="val gold">20</span>
+        <span class="desc">Parallel Agents</span>
+      </div>
+      <div class="metric-card">
+        <span class="val green">12 min</span>
+        <span class="desc">Total Wall Time</span>
+      </div>
+      <div class="metric-card">
+        <span class="val blue">~1.2M</span>
+        <span class="desc">Tokens Consumed</span>
+      </div>
+      <div class="metric-card">
+        <span class="val purple">20x</span>
+        <span class="desc">Speedup vs Single</span>
+      </div>
+      <div class="metric-card">
+        <span class="val red">$2.40</span>
+        <span class="desc">Total API Cost</span>
+      </div>
+    </div>
+
+    <h4 style="margin-bottom: 1rem; color: var(--gold);">Mission Timeline</h4>
+    <div class="story-timeline">
+      <div class="timeline-item">
+        <div class="time">T+0s</div>
+        <div class="event">Centurion quickstart &mdash; hardware probed, 20 claude_cli agents recommended</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">T+3s</div>
+        <div class="event">Legion "research-ops" raised, Century mustered with 20 legionaries</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">T+5s</div>
+        <div class="event">Batch of 20 research tasks submitted &mdash; one company per agent</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">T+15s</div>
+        <div class="event">All 20 agents active and executing in parallel</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">T+6min</div>
+        <div class="event">Broadcast sent: "Include funding round details and key investors"</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">T+8min</div>
+        <div class="event">First 5 agents complete, Optio scales down to 15 agents</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">T+12min</div>
+        <div class="event">All 20 reports collected. 0 failures. Fleet disbanded.</div>
+      </div>
+    </div>
+
+    <div class="code-block" style="margin-top: 2rem;">
+      <code>
+<span class="code-comment"># The entire operation in 5 commands</span>
+<span class="code-cmd">centurion quickstart</span> <span class="code-flag">--agent-type</span> <span class="code-str">claude_cli</span>
+
+<span class="code-cmd">curl</span> <span class="code-flag">-X POST</span> localhost:8100/api/centurion/legions <span class="code-flag">\</span>
+  <span class="code-flag">-d</span> <span class="code-str">'{"name": "Research Ops"}'</span>
+
+<span class="code-cmd">curl</span> <span class="code-flag">-X POST</span> localhost:8100/api/centurion/legions/default/centuries <span class="code-flag">\</span>
+  <span class="code-flag">-d</span> <span class="code-str">'{"agent_type": "claude_cli", "min_legionaries": 20, "max_legionaries": 20}'</span>
+
+<span class="code-cmd">curl</span> <span class="code-flag">-X POST</span> localhost:8100/api/centurion/legions/default/tasks <span class="code-flag">\</span>
+  <span class="code-flag">-d</span> <span class="code-str">'{"prompts": ["Research OpenAI", "Research Anthropic", "Research Google DeepMind", ...]}'</span>
+
+<span class="code-cmd">curl</span> <span class="code-flag">-X POST</span> localhost:8100/api/centurion/broadcast <span class="code-flag">\</span>
+  <span class="code-flag">-d</span> <span class="code-str">'{"message": "Include funding details", "target": "all"}'</span>
+      </code>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON -->
+<section id="comparison">
+  <h2 class="section-title">How Centurion Compares</h2>
+  <p class="section-subtitle">Built for scale. Not limited to role-playing 2-3 agents.</p>
+  <div style="overflow-x: auto;">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>CrewAI</th>
+          <th>AutoGen</th>
+          <th>LangGraph</th>
+          <th class="highlight-col-header">Centurion</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature">Max practical agents</td>
+          <td>2-5</td>
+          <td>2-10</td>
+          <td>2-5</td>
+          <td class="highlight-col"><strong>100+</strong></td>
+        </tr>
+        <tr>
+          <td class="feature">Hardware-aware scheduling</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Auto-scaling</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td class="feature">K8s-style admission control</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Real-time event streaming</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Fleet broadcasting</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Claude Code native</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td class="feature">OpenClaw compatible</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td class="feature">MCP server</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span> (18 tools)</td>
+        </tr>
+        <tr>
+          <td class="feature">A2A protocol (Google)</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td class="feature">REST API</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td>partial</td>
+          <td class="highlight-col"><span class="check">&#10003;</span> (21 endpoints)</td>
+        </tr>
+        <tr>
+          <td class="feature">Circuit breaker</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Priority task queuing</td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td><span class="cross">&#10007;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+        <tr>
+          <td class="feature">Python library mode</td>
+          <td><span class="check">&#10003;</span></td>
+          <td><span class="check">&#10003;</span></td>
+          <td><span class="check">&#10003;</span></td>
+          <td class="highlight-col"><span class="check">&#10003;</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<section id="integrations">
+  <h2 class="section-title">Five Ways to Connect</h2>
+  <p class="section-subtitle">Centurion fits into your existing AI stack.</p>
+  <div class="integration-row">
+    <div class="int-badge"><span class="int-dot green"></span> REST API (21 endpoints)</div>
+    <div class="int-badge"><span class="int-dot purple"></span> MCP Server (18 tools)</div>
+    <div class="int-badge"><span class="int-dot blue"></span> Claude Code Skill</div>
+    <div class="int-badge"><span class="int-dot gold"></span> A2A Protocol (Google)</div>
+    <div class="int-badge"><span class="int-dot red"></span> Python Library</div>
+  </div>
+
+  <div class="code-block">
+    <code>
+<span class="code-comment"># 1. REST API</span>
+<span class="code-cmd">centurion quickstart</span>
+<span class="code-cmd">curl</span> http://localhost:8100/api/centurion/status
+
+<span class="code-comment"># 2. MCP Server (Claude Code / Claude Desktop)</span>
+<span class="code-cmd">claude mcp add</span> centurion <span class="code-flag">--</span> python <span class="code-flag">-m</span> centurion.mcp
+
+<span class="code-comment"># 3. Claude Code Skill</span>
+<span class="code-cmd">python -m</span> centurion.skill <span class="code-flag">&gt;</span> ~/.claude/skills/centurion.toml
+
+<span class="code-comment"># 4. A2A Protocol (Agent-to-Agent discovery)</span>
+<span class="code-cmd">curl</span> http://localhost:8100/.well-known/agent.json
+
+<span class="code-comment"># 5. Python Library (no HTTP needed)</span>
+<span class="code-str">from centurion import Centurion</span>
+<span class="code-str">engine = Centurion()</span>
+    </code>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>Ready to Command Your Army?</h2>
+  <p>pip install centurion &middot; one command to deploy &middot; MIT licensed</p>
+  <div class="hero-buttons">
+    <a href="https://github.com/spacelobster88/centurion" class="btn btn-primary">
+      Star on GitHub
+    </a>
+    <a href="https://github.com/spacelobster88/centurion/blob/main/CONTRIBUTING.md" class="btn btn-secondary">
+      Contribute
+    </a>
+  </div>
+</div>
+
+<footer>
+  <p>Centurion &copy; 2026 &middot; MIT License &middot; Built with Roman military precision</p>
+</footer>
+
+</body>
+</html>
