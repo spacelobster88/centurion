@@ -11,6 +11,7 @@ import uuid
 
 from centurion.agent_types.registry import AgentTypeRegistry
 from centurion.config import CenturionConfig
+from centurion.core.broadcast import BroadcastResult, Broadcaster
 from centurion.core.century import CenturyConfig
 from centurion.core.events import EventBus
 from centurion.core.legion import Legion, LegionQuota
@@ -44,6 +45,7 @@ class Centurion:
         self.registry = AgentTypeRegistry()
         self.event_bus = EventBus(max_history=self.config.event_buffer_size)
         self.legions: dict[str, Legion] = {}
+        self.broadcaster = Broadcaster(self)
         self._shutting_down: bool = False
         self._register_default_types()
         logger.info(
@@ -74,7 +76,7 @@ class Centurion:
 
         legion = Legion(legion_id=legion_id, name=name, quota=quota)
         self.legions[legion_id] = legion
-        logger.info("Legion raised", extra={"legion_id": legion_id, "name": name})
+        logger.info("Legion raised", extra={"legion_id": legion_id, "legion_name": name})
         await self.event_bus.emit(
             "legion_raised",
             entity_type="legion",
@@ -102,6 +104,74 @@ class Centurion:
         if legion is None:
             raise KeyError(f"Legion {legion_id!r} not found")
         return legion
+
+    async def broadcast(
+        self, message: str, target: str = "all", target_id: str | None = None
+    ) -> dict:
+        """Broadcast a message to agents.
+
+        Args:
+            message: The message/instruction to broadcast
+            target: "all", "legion", or "century"
+            target_id: Required when target is "legion" or "century"
+
+        Returns dict with delivery stats.
+        """
+        if target == "all":
+            total_delivered = 0
+            total_failed = 0
+            legion_results = {}
+            for legion_id, legion in self.legions.items():
+                result = await legion.broadcast(message)
+                total_delivered += result["total_delivered"]
+                total_failed += result["total_failed"]
+                legion_results[legion_id] = result
+            stats = {
+                "target": "all",
+                "total_delivered": total_delivered,
+                "total_failed": total_failed,
+                "legions": legion_results,
+            }
+        elif target == "legion":
+            if not target_id:
+                raise ValueError("target_id is required when target is 'legion'")
+            legion = self.get_legion(target_id)
+            stats = await legion.broadcast(message)
+            stats["target"] = "legion"
+        elif target == "century":
+            if not target_id:
+                raise ValueError("target_id is required when target is 'century'")
+            century = None
+            for legion in self.legions.values():
+                if target_id in legion.centuries:
+                    century = legion.centuries[target_id]
+                    break
+            if century is None:
+                raise KeyError(f"Century {target_id!r} not found")
+            results = await century.broadcast(message)
+            delivered = sum(1 for r in results if r.get("delivered"))
+            stats = {
+                "target": "century",
+                "target_id": target_id,
+                "total_delivered": delivered,
+                "total_failed": len(results) - delivered,
+                "legionaries": results,
+            }
+        else:
+            raise ValueError(f"Invalid target: {target!r}. Must be 'all', 'legion', or 'century'")
+
+        await self.event_bus.emit(
+            "broadcast_sent",
+            entity_type="broadcast",
+            payload={
+                "target": target,
+                "target_id": target_id,
+                "message_length": len(message),
+                "total_delivered": stats["total_delivered"],
+                "total_failed": stats["total_failed"],
+            },
+        )
+        return stats
 
     def fleet_status(self) -> dict:
         """Macro-level status of the entire engine."""

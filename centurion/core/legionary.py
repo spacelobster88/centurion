@@ -43,6 +43,7 @@ class Legionary:
     tasks_failed: int = 0
     total_duration: float = 0.0
     consecutive_failures: int = 0
+    broadcasts: list[dict] = field(default_factory=list)
 
     @property
     def needs_replacement(self) -> bool:
@@ -134,6 +135,17 @@ class Legionary:
             if self.status != LegionaryStatus.FAILED:
                 self.status = LegionaryStatus.IDLE
             self.current_task_id = None
+
+    async def receive_broadcast(self, message: str) -> None:
+        """Receive a broadcast message. Stores in message inbox."""
+        self.broadcasts.append({
+            "message": message,
+            "received_at": time.time(),
+        })
+        logger.debug(
+            "Broadcast received",
+            extra={"legionary_id": self.id, "message_len": len(message)},
+        )
 
     def to_dict(self) -> dict:
         return {

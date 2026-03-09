@@ -167,6 +167,27 @@ class Century:
         elif target < current:
             await self._scale_down(current - target)
 
+    async def broadcast(self, message: str) -> list[dict]:
+        """Send a message to all active legionaries in this century."""
+        results = []
+        for leg in list(self.legionaries.values()):
+            if leg.status == LegionaryStatus.TERMINATED:
+                continue
+            try:
+                await leg.receive_broadcast(message)
+                results.append({"legionary_id": leg.id, "delivered": True})
+            except Exception as exc:
+                logger.warning(
+                    "Broadcast delivery failed for legionary %s: %s",
+                    leg.id, exc,
+                )
+                results.append({
+                    "legionary_id": leg.id,
+                    "delivered": False,
+                    "error": str(exc),
+                })
+        return results
+
     def status_report(self) -> dict:
         return {
             "century_id": self.id,

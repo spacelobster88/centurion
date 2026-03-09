@@ -43,6 +43,13 @@ class SubmitBatchRequest(BaseModel):
     distribute: str = "round_robin"
 
 
+class BroadcastRequest(BaseModel):
+    """Broadcast a message to agents."""
+    message: str
+    target: Literal["all", "legion", "century"] = "all"
+    target_id: str | None = None
+
+
 class ScaleRequest(BaseModel):
     """Manually scale a century."""
     target_count: int
@@ -108,6 +115,14 @@ class LegionResponse(BaseModel):
     centuries_count: int = 0
     total_legionaries: int = 0
     centuries: dict[str, CenturyResponse] = Field(default_factory=dict)
+
+
+class BroadcastResponse(BaseModel):
+    """Result of a broadcast operation."""
+    target: str
+    target_id: str | None = None
+    total_delivered: int = 0
+    total_failed: int = 0
 
 
 class FleetStatusResponse(BaseModel):

@@ -288,5 +288,36 @@ def list_agent_types() -> dict:
     return _get("/agent-types")
 
 
+# =========================================================================
+# Broadcast
+# =========================================================================
+
+@mcp.tool()
+def broadcast(message: str, target: str = "all", target_id: str | None = None) -> dict:
+    """Broadcast a message/instruction to working agents.
+
+    Supports targeting all agents, a specific legion, or a specific century.
+
+    Args:
+        message: The message or instruction to broadcast
+        target: Scope of the broadcast ('all', 'legion', or 'century')
+        target_id: Required when target is 'legion' or 'century' -- the ID of the target
+    """
+    payload: dict[str, Any] = {"message": message, "target": target}
+    if target_id is not None:
+        payload["target_id"] = target_id
+    return _post("/broadcast", json=payload)
+
+
+@mcp.tool()
+def recommend() -> dict:
+    """Get hardware-aware deployment recommendation.
+
+    Probes the system's CPU, RAM, and load, then returns recommendations
+    for how many agents of each type can run concurrently.
+    """
+    return _get("/recommend")
+
+
 if __name__ == "__main__":
     mcp.run()

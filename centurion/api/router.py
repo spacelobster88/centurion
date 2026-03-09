@@ -13,6 +13,8 @@ from fastapi.responses import JSONResponse
 
 from centurion.api.schemas import (
     AddCenturyRequest,
+    BroadcastRequest,
+    BroadcastResponse,
     ComponentStatus,
     CenturyResponse,
     FleetStatusResponse,
@@ -162,6 +164,27 @@ async def hardware_status(request: Request) -> dict[str, Any]:
     """Return hardware resources and scheduling state."""
     engine = _engine(request)
     return engine.hardware_report()
+
+
+# =========================================================================
+# Broadcast
+# =========================================================================
+
+@router.post("/broadcast", response_model=BroadcastResponse)
+async def broadcast(request: Request, body: BroadcastRequest) -> dict[str, Any]:
+    """Broadcast a message to agents. Target all, a specific legion, or a century."""
+    engine = _engine(request)
+    try:
+        result = await engine.broadcast(
+            message=body.message,
+            target=body.target,
+            target_id=body.target_id,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return result
 
 
 # =========================================================================
@@ -439,6 +462,68 @@ async def get_legionary(
     raise HTTPException(
         status_code=404, detail=f"Legionary {legionary_id!r} not found"
     )
+
+
+# =========================================================================
+# Broadcast
+# =========================================================================
+
+@router.post("/broadcast/century/{century_id}", status_code=200)
+async def broadcast_to_century(
+    request: Request, century_id: str, body: SubmitTaskRequest
+) -> dict[str, Any]:
+    """Broadcast a message to all legionaries in a century (row)."""
+    engine = _engine(request)
+    try:
+        result = await engine.broadcaster.broadcast_to_century(
+            century_id=century_id,
+            message=body.prompt,
+            wait=False,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return result.to_dict()
+
+
+@router.post("/broadcast/legion/{legion_id}", status_code=200)
+async def broadcast_to_legion(
+    request: Request, legion_id: str, body: SubmitTaskRequest
+) -> dict[str, Any]:
+    """Broadcast a message to all legionaries in a legion (column)."""
+    engine = _engine(request)
+    try:
+        result = await engine.broadcaster.broadcast_to_legion(
+            legion_id=legion_id,
+            message=body.prompt,
+            wait=False,
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return result.to_dict()
+
+
+@router.post("/broadcast/fleet", status_code=200)
+async def broadcast_to_fleet(
+    request: Request, body: SubmitTaskRequest
+) -> dict[str, Any]:
+    """Broadcast a message to all legionaries in the entire fleet."""
+    engine = _engine(request)
+    result = await engine.broadcaster.broadcast_to_fleet(
+        message=body.prompt,
+        wait=False,
+    )
+    return result.to_dict()
+
+
+# =========================================================================
+# Recommend
+# =========================================================================
+
+@router.get("/recommend")
+async def recommend(request: Request) -> dict[str, Any]:
+    """Get hardware-aware deployment recommendation."""
+    from centurion.__main__ import _build_recommendation
+    return _build_recommendation()
 
 
 # =========================================================================

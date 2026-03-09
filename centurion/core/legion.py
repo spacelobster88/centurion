@@ -104,6 +104,25 @@ class Legion:
             await century.dismiss()
         self.centuries.clear()
 
+    async def broadcast(self, message: str) -> dict:
+        """Broadcast to all centuries in this legion."""
+        total_delivered = 0
+        total_failed = 0
+        century_results = {}
+        for century_id, century in self.centuries.items():
+            results = await century.broadcast(message)
+            delivered = sum(1 for r in results if r.get("delivered"))
+            failed = len(results) - delivered
+            total_delivered += delivered
+            total_failed += failed
+            century_results[century_id] = results
+        return {
+            "legion_id": self.id,
+            "total_delivered": total_delivered,
+            "total_failed": total_failed,
+            "centuries": century_results,
+        }
+
     async def submit_batch(
         self,
         prompts: list[str],
