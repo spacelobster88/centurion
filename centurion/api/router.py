@@ -519,6 +519,23 @@ async def broadcast_to_fleet(
 # Recommend
 # =========================================================================
 
+@router.post("/purge")
+async def purge_memory(request: Request) -> dict[str, Any]:
+    """Trigger macOS memory purge (sudo -n purge). Best-effort, non-blocking."""
+    import platform
+    import subprocess as sp
+
+    if platform.system() != "Darwin":
+        return {"status": "skipped", "reason": "not macOS"}
+    try:
+        result = sp.run(["sudo", "-n", "purge"], capture_output=True, timeout=5)
+        if result.returncode == 0:
+            return {"status": "ok", "message": "Memory purged"}
+        return {"status": "failed", "returncode": result.returncode, "stderr": result.stderr.decode()[:200]}
+    except Exception as exc:
+        return {"status": "error", "message": str(exc)}
+
+
 @router.get("/recommend")
 async def recommend(request: Request) -> dict[str, Any]:
     """Get hardware-aware deployment recommendation."""
