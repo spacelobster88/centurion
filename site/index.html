@@ -461,10 +461,11 @@
 <nav>
   <div class="logo">CENTURION</div>
   <div class="nav-links">
+    <a href="#why">Why Centurion</a>
     <a href="#features">Features</a>
-    <a href="#story">Case Study</a>
-    <a href="#comparison">Comparison</a>
-    <a href="#integrations">Integrations</a>
+    <a href="#harness">Harness Loop</a>
+    <a href="#quickstart">Quick Start</a>
+    <a href="#links">Links</a>
     <a href="https://github.com/spacelobster88/centurion">GitHub</a>
   </div>
 </nav>
@@ -824,6 +825,268 @@
 <span class="code-str">from centurion import Centurion</span>
 <span class="code-str">engine = Centurion()</span>
     </code>
+  </div>
+</section>
+
+<!-- WHY CENTURION -->
+<section id="why">
+  <h2 class="section-title">Why Centurion?</h2>
+  <p class="section-subtitle">Claude Code has zero resource management. Centurion fills the gap Anthropic won't.</p>
+
+  <div class="story-card" style="margin-bottom: 2rem;">
+    <div class="story-header">
+      <span class="story-badge" style="background: rgba(192,57,43,0.15); color: var(--red-bright);">EVIDENCE</span>
+      <h3 class="story-title">Claude Code's Documented Resource Problems</h3>
+    </div>
+    <p class="story-desc">
+      Claude Code has no aggregate memory cap, no spawn throttle, and no resource awareness. These aren't edge cases &mdash; they're
+      well-documented issues with dozens of upvotes from real users experiencing OOM kills, system lockups, and 120GB+ memory leaks.
+    </p>
+    <div class="story-metrics">
+      <div class="metric-card">
+        <span class="val red">120 GB</span>
+        <span class="desc">Peak memory leak (<a href="https://github.com/anthropics/claude-code/issues/4953">#4953</a>)</span>
+      </div>
+      <div class="metric-card">
+        <span class="val red">93 GB</span>
+        <span class="desc">Heap in 5 min (<a href="https://github.com/anthropics/claude-code/issues/22188">#22188</a>)</span>
+      </div>
+      <div class="metric-card">
+        <span class="val red">24</span>
+        <span class="desc">Agents in 2 min, total lockup (<a href="https://github.com/anthropics/claude-code/issues/15487">#15487</a>)</span>
+      </div>
+      <div class="metric-card">
+        <span class="val gold">NOT_PLANNED</span>
+        <span class="desc"><a href="https://github.com/anthropics/claude-code/issues/15487">#15487</a> closed by Anthropic</span>
+      </div>
+    </div>
+
+    <h4 style="margin-bottom: 1rem; color: var(--gold);">GitHub Issue Evidence</h4>
+    <div class="story-timeline">
+      <div class="timeline-item">
+        <div class="time"><a href="https://github.com/anthropics/claude-code/issues/4953">#4953</a> &mdash; OPEN &middot; 62 upvotes</div>
+        <div class="event">Memory Leak: process grows to 120+ GB RAM, OOM killed on 128GB system within 30-60 min</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time"><a href="https://github.com/anthropics/claude-code/issues/22042">#22042</a> &mdash; CLOSED &middot; 92 upvotes</div>
+        <div class="event">Critical memory regression: typing "Test" causes 467MB to 7.5GB in 20 seconds</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time"><a href="https://github.com/anthropics/claude-code/issues/25926">#25926</a> &mdash; OPEN</div>
+        <div class="event">JavaScript heap OOM: mutableMessages array grows unbounded, V8 heap hits 4.1GB after ~2.5 hours</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time"><a href="https://github.com/anthropics/claude-code/issues/21403">#21403</a> &mdash; OPEN</div>
+        <div class="event">Memory leak causing OOM kill at 15-17GB on 32GB system with parallel subagents</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time"><a href="https://github.com/anthropics/claude-code/issues/15487">#15487</a> &mdash; CLOSED (NOT_PLANNED)</div>
+        <div class="event">Request for maxParallelAgents setting &mdash; 24 agents spawned in 2 min on 4GB VPS, 17x disk I/O spike, complete lockup. <strong>Anthropic closed this as NOT_PLANNED.</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <h4 style="margin-bottom: 1rem; color: var(--gold); font-size: 1.2rem;">Claude Code vs Centurion</h4>
+  <div style="overflow-x: auto;">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Claude Code</th>
+          <th class="highlight-col-header">Centurion</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature">Memory pressure monitoring</td>
+          <td><span class="cross">&#10007;</span> None &mdash; no awareness of system RAM</td>
+          <td class="highlight-col"><span class="check">&#10003;</span> 3-level detection (Normal / Warn / Critical)</td>
+        </tr>
+        <tr>
+          <td class="feature">RAM/CPU-aware scheduling</td>
+          <td><span class="cross">&#10007;</span> No hardware probing at all</td>
+          <td class="highlight-col"><span class="check">&#10003;</span> Probes CPU, RAM, load averages before every spawn</td>
+        </tr>
+        <tr>
+          <td class="feature">Parallel agent limits</td>
+          <td><span class="cross">&#10007;</span> <a href="https://github.com/anthropics/claude-code/issues/15487">#15487 closed NOT_PLANNED</a></td>
+          <td class="highlight-col"><span class="check">&#10003;</span> K8s-style admission control with configurable limits</td>
+        </tr>
+        <tr>
+          <td class="feature">Cross-session coordination</td>
+          <td><span class="cross">&#10007;</span> Each session is isolated</td>
+          <td class="highlight-col"><span class="check">&#10003;</span> Centralized scheduler tracks all agent processes</td>
+        </tr>
+        <tr>
+          <td class="feature">Memory leak detection</td>
+          <td><span class="cross">&#10007;</span> <a href="https://github.com/anthropics/claude-code/issues/4953">120GB leak documented</a></td>
+          <td class="highlight-col"><span class="check">&#10003;</span> RSS audit warns when actual exceeds 1.5x allocated</td>
+        </tr>
+        <tr>
+          <td class="feature">Circuit breaker</td>
+          <td><span class="cross">&#10007;</span> Failed spawns don't trigger backoff</td>
+          <td class="highlight-col"><span class="check">&#10003;</span> 3-state breaker (Closed / Open / Half-Open)</td>
+        </tr>
+        <tr>
+          <td class="feature">Auto-scaling with backpressure</td>
+          <td><span class="cross">&#10007;</span> No scaling concept</td>
+          <td class="highlight-col"><span class="check">&#10003;</span> Optio monitors queue depth and adjusts fleet size</td>
+        </tr>
+        <tr>
+          <td class="feature">OS-level pressure signals</td>
+          <td><span class="cross">&#10007;</span> Node.js process, no OS integration</td>
+          <td class="highlight-col"><span class="check">&#10003;</span> Reads macOS kern.memorystatus_level, Linux PSI</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p style="color: var(--text-dim); margin-top: 1.5rem; font-size: 0.95rem;">
+    Centurion operates at the <strong>OS/infrastructure layer</strong> &mdash; reading vm_stat, sysctl, load averages, and process RSS.
+    This is fundamentally outside Anthropic's scope. They build AI models and developer tools; resource scheduling is systems infrastructure that varies per machine, per deployment, and per workload.
+    <strong>No competing tool provides resource-aware scheduling for AI agents.</strong>
+  </p>
+</section>
+
+<!-- BEST SCENARIO: HARNESS LOOP -->
+<section id="harness">
+  <h2 class="section-title">Best Scenario: Harness Loop</h2>
+  <p class="section-subtitle">Running 20+ parallel research and engineering tasks, safely managed by Centurion.</p>
+
+  <div class="story-card">
+    <div class="story-header">
+      <span class="story-badge">IDEAL USE CASE</span>
+      <h3 class="story-title">Parallel Task Execution with Automatic Backpressure</h3>
+    </div>
+    <p class="story-desc">
+      <a href="https://github.com/spacelobster88/harness-loop">Harness-loop</a> is a Claude Code skill that decomposes projects into a task DAG and executes independent tasks in parallel via subagents.
+      A typical engineering phase might dispatch 10-20 independent tasks &mdash; implement endpoint A, write tests for B, create migration C &mdash;
+      each consuming 250-500MB RAM plus CPU. On a 32GB machine, naively spawning 20 agents means 5-10GB RAM, context switching overhead, and I/O saturation.
+    </p>
+
+    <div class="features-grid" style="margin-bottom: 2rem;">
+      <div class="feature-card" style="border-color: var(--red);">
+        <div class="feature-icon">&#9888;</div>
+        <h3 style="color: var(--red-bright);">Without Centurion</h3>
+        <p>Harness-loop guesses a safe concurrency number or uses a hardcoded limit. If one agent's Claude Code process leaks memory (<a href="https://github.com/anthropics/claude-code/issues/4953">#4953</a>), nothing detects the rising pressure. Result: OOM kills, system lockups, lost work.</p>
+      </div>
+      <div class="feature-card" style="border-color: var(--green);">
+        <div class="feature-icon">&#9989;</div>
+        <h3 style="color: var(--green);">With Centurion</h3>
+        <p>Before each batch, harness-loop queries <code>recommended_max_agents()</code> and <code>can_schedule()</code>. Centurion adapts in real-time to actual system conditions. If memory pressure rises mid-batch, spawning halts automatically. Progressive ramp-up confirms stability before scaling further.</p>
+      </div>
+    </div>
+
+    <h4 style="margin-bottom: 1rem; color: var(--gold);">How It Works</h4>
+    <div class="story-timeline">
+      <div class="timeline-item">
+        <div class="time">Step 1</div>
+        <div class="event">User describes a project: "Build a REST API with auth, database, and tests"</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">Step 2</div>
+        <div class="event">Harness-loop decomposes into phases: requirements, architecture, engineering, QA</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">Step 3</div>
+        <div class="event">Independent tasks within each phase are identified for parallel dispatch</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">Step 4</div>
+        <div class="event">Centurion's scheduler determines safe concurrency: <code>recommended_max_agents()</code> returns 8 on this machine</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">Step 5</div>
+        <div class="event">First batch of 8 agents dispatched. Centurion monitors RAM, CPU, and process RSS in real-time</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">Step 6</div>
+        <div class="event">Memory pressure rises to WARN &mdash; Centurion increases headroom, slows spawning. No new agents until pressure drops</div>
+      </div>
+      <div class="timeline-item">
+        <div class="time">Step 7</div>
+        <div class="event">Agents complete, pressure drops to NORMAL. Next batch dispatched. All tasks finish with zero OOM kills</div>
+      </div>
+    </div>
+
+    <div class="code-block" style="margin-top: 2rem;">
+      <code>
+<span class="code-comment"># Harness-loop integration with Centurion</span>
+<span class="code-str">from centurion import Centurion</span>
+
+<span class="code-str">engine = Centurion()</span>
+<span class="code-str">max_agents = engine.scheduler.recommended_max_agents()</span>
+
+<span class="code-comment"># Before each spawn, check admission</span>
+<span class="code-str">if engine.scheduler.can_schedule(agent_type="claude_cli"):</span>
+<span class="code-str">    engine.dispatch_task(task)</span>
+<span class="code-str">else:</span>
+<span class="code-str">    # Backpressure: wait for resources to free up</span>
+<span class="code-str">    engine.wait_for_capacity()</span>
+      </code>
+    </div>
+  </div>
+</section>
+
+<!-- HOW TO USE IT -->
+<section id="quickstart">
+  <h2 class="section-title">How to Use It</h2>
+  <p class="section-subtitle">Three steps to resource-aware agent orchestration.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">1</div>
+      <h3>Install</h3>
+      <div class="code-block" style="margin: 0.5rem 0 0;">
+        <code><span class="code-cmd">pip install</span> centurion</code>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">2</div>
+      <h3>Start the Server</h3>
+      <div class="code-block" style="margin: 0.5rem 0 0;">
+        <code>
+<span class="code-comment"># Probes hardware, recommends config, starts server</span>
+<span class="code-cmd">centurion quickstart</span> <span class="code-flag">--agent-type</span> <span class="code-str">claude_cli</span>
+        </code>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">3</div>
+      <h3>Integrate with Claude Code</h3>
+      <div class="code-block" style="margin: 0.5rem 0 0;">
+        <code>
+<span class="code-comment"># Option A: MCP Server</span>
+<span class="code-cmd">claude mcp add</span> centurion <span class="code-flag">--</span> python <span class="code-flag">-m</span> centurion.mcp
+
+<span class="code-comment"># Option B: Claude Code Skill</span>
+<span class="code-cmd">python -m</span> centurion.skill <span class="code-flag">&gt;</span> ~/.claude/skills/centurion.toml
+
+<span class="code-comment"># Option C: REST API</span>
+<span class="code-cmd">curl</span> http://localhost:8100/api/centurion/status
+        </code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LINKS -->
+<section id="links">
+  <h2 class="section-title">Ecosystem</h2>
+  <p class="section-subtitle">Centurion and related projects.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">&#9876;</div>
+      <h3>Centurion</h3>
+      <p>AI agent orchestration engine with K8s-inspired scheduling and hardware-aware resource management.</p>
+      <p style="margin-top: 0.75rem;"><a href="https://github.com/spacelobster88/centurion" class="btn btn-secondary" style="display: inline-flex; padding: 8px 16px; font-size: 0.85rem;">GitHub</a></p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">&#128260;</div>
+      <h3>Harness Loop</h3>
+      <p>Claude Code skill that decomposes projects into task DAGs and executes independent tasks in parallel. Best used with Centurion for safe scheduling.</p>
+      <p style="margin-top: 0.75rem;"><a href="https://github.com/spacelobster88/harness-loop" class="btn btn-secondary" style="display: inline-flex; padding: 8px 16px; font-size: 0.85rem;">GitHub</a></p>
+    </div>
   </div>
 </section>
 
