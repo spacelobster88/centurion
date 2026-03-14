@@ -4,11 +4,12 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-298%20passing-brightgreen.svg)]()
-[![MCP Tools](https://img.shields.io/badge/MCP%20tools-18-purple.svg)]()
+[![Tests](https://img.shields.io/badge/tests-382%20passing-brightgreen.svg)]()
+[![MCP Tools](https://img.shields.io/badge/MCP%20tools-19-purple.svg)]()
 [![A2A Protocol](https://img.shields.io/badge/A2A-compatible-orange.svg)](https://google.github.io/A2A/)
 [![OpenClaw Compatible](https://img.shields.io/badge/OpenClaw-compatible-red.svg)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-native-blueviolet.svg)]()
+[![Docs](https://img.shields.io/badge/docs-website-blue.svg)](https://spacelobster88.github.io/centurion/)
 
 ---
 
@@ -110,6 +111,10 @@ Centurion is an AI agent orchestration engine that manages fleets of AI agents a
 
 ### Why Centurion?
 
+**Claude Code has zero resource management.** It has no RAM awareness, no parallel agent limits, and no memory pressure detection. Spawning 20+ subagents on a constrained machine can OOM-kill the entire system ([#4953](https://github.com/anthropics/claude-code/issues/4953), [#21403](https://github.com/anthropics/claude-code/issues/21403), [#25926](https://github.com/anthropics/claude-code/issues/25926)). A community request for a `maxParallelAgents` setting ([#15487](https://github.com/anthropics/claude-code/issues/15487)) was **closed NOT_PLANNED** by Anthropic -- they view resource scheduling as outside their application boundary.
+
+Centurion fills this permanent gap. It operates at the **infrastructure layer** (OS, RAM, CPU, process management), not the model layer. It probes your hardware, enforces admission control before every agent spawn, detects memory pressure in real time, and scales fleets up or down automatically. No other tool in the ecosystem does this.
+
 | Feature | CrewAI | AutoGen | LangGraph | Centurion |
 |---------|--------|---------|-----------|-----------|
 | Max practical agents | 2-5 | 2-10 | 2-5 | **100+** |
@@ -128,7 +133,7 @@ Centurion is an AI agent orchestration engine that manages fleets of AI agents a
 | Python library mode | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Task queuing with priority | :x: | :x: | :x: | :white_check_mark: |
 
-> **CrewAI / AutoGen / LangGraph** are excellent for workflows with 1-5 specialized agents in fixed roles. **Centurion** is built for when you need to scale — 10, 50, or 100+ agents executing tasks in parallel with real-time fleet management.
+> **CrewAI / AutoGen / LangGraph** are excellent for workflows with 1-5 specialized agents in fixed roles. **Centurion** is built for when you need to scale -- 10, 50, or 100+ agents executing tasks in parallel with real-time fleet management. It is infrastructure-level and model-independent: the same scheduler works for Claude, GPT, Gemini, or shell scripts.
 
 ## Concepts
 
@@ -309,7 +314,7 @@ claude mcp add centurion -- python -m centurion.mcp
 }
 ```
 
-Available MCP tools: `fleet_status`, `hardware_status`, `raise_legion`, `list_legions`, `get_legion`, `disband_legion`, `add_century`, `get_century`, `scale_century`, `remove_century`, `submit_task`, `submit_batch`, `get_task`, `cancel_task`, `list_legionaries`, `get_legionary`, `list_agent_types`, `broadcast`.
+Available MCP tools (19): `fleet_status`, `hardware_status`, `raise_legion`, `list_legions`, `get_legion`, `disband_legion`, `add_century`, `get_century`, `scale_century`, `remove_century`, `submit_task`, `submit_batch`, `get_task`, `cancel_task`, `list_legionaries`, `get_legionary`, `list_agent_types`, `broadcast`, `recommend`.
 
 ### 3. Claude Code Skill
 
@@ -478,3 +483,7 @@ pytest tests/ -v --cov=centurion
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+**[Documentation & Website](https://spacelobster88.github.io/centurion/)** | **[GitHub](https://github.com/spacelobster88/centurion)** | **[Armory (full-stack installer)](https://github.com/spacelobster88/armory)**
