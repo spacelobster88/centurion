@@ -23,6 +23,7 @@ from centurion.core.exceptions import (
     TaskTimeoutError,
 )
 from centurion.core.legionary import Legionary, LegionaryStatus
+from centurion.core.scheduler import MemoryPressureLevel
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,7 @@ class Century:
         self._circuit_breaker = CircuitBreaker(name=century_id)
         self._running = False
         self._last_scale_time: float = 0.0
+        self._last_memory_scale_time: float = 0.0
         self._queue_empty_since: float | None = None
         self.created_at: float = time.time()
 
@@ -453,8 +455,80 @@ class Century:
                 await asyncio.sleep(60.0)
                 consecutive_errors = 0
 
+    async def _memory_pressure_scale_down(self) -> None:
+        """Terminate idle agents when memory pressure is elevated.
+
+        At CRITICAL pressure: terminate ALL idle agents (emergency mode,
+        ignores min_legionaries).
+        At WARN pressure: terminate idle agents above min_legionaries.
+        """
+        if self.scheduler is None:
+            return
+
+        pressure = self.scheduler._memory_pressure_level()
+        if pressure == MemoryPressureLevel.NORMAL:
+            return
+
+        idle = [
+            lid for lid, l in self.legionaries.items()
+            if l.status == LegionaryStatus.IDLE
+        ]
+        if not idle:
+            return
+
+        if pressure == MemoryPressureLevel.CRITICAL:
+            # Emergency: terminate ALL idle, even below min_legionaries
+            to_remove = idle
+        else:
+            # WARN: only terminate excess above min_legionaries
+            current = len(self.legionaries)
+            excess = current - self.config.min_legionaries
+            if excess <= 0:
+                return
+            to_remove = idle[:excess]
+
+        if not to_remove:
+            return
+
+        for lid in to_remove:
+            leg = self.legionaries.pop(lid, None)
+            if leg:
+                await self._terminate_legionary(leg)
+            worker = self._workers.pop(lid, None)
+            if worker:
+                worker.cancel()
+
+        self._last_memory_scale_time = time.time()
+        logger.info(
+            "Optio: memory pressure scale-down",
+            extra={
+                "century_id": self.id,
+                "pressure": pressure.value,
+                "removed": len(to_remove),
+                "remaining": len(self.legionaries),
+            },
+        )
+        if self.event_bus:
+            await self.event_bus.emit(
+                "memory_scale_down",
+                entity_type="century",
+                entity_id=self.id,
+                payload={
+                    "pressure": pressure.value,
+                    "removed": len(to_remove),
+                    "remaining": len(self.legionaries),
+                },
+            )
+
     async def _optio_check(self) -> None:
         """Single autoscale evaluation."""
+        # Memory-pressure scale-down runs first, before any scale-up logic
+        await self._memory_pressure_scale_down()
+
+        # 30s cooldown after memory scale-down prevents oscillation
+        if time.time() - self._last_memory_scale_time < 30.0:
+            return
+
         if time.time() - self._last_scale_time < self.config.cooldown:
             return
 

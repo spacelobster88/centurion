@@ -50,3 +50,6 @@ Issues = "https://github.com/spacelobster88/centurion/issues"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "e2e: end-to-end tests that run against a real FastAPI app",
+]

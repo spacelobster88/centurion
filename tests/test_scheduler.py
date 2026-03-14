@@ -1,12 +1,12 @@
 """Tests for CenturionScheduler — resource tracking and admission control."""
 
 import time
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
 from centurion.config import CenturionConfig
-from centurion.core.scheduler import CenturionScheduler, SystemResources
+from centurion.core.scheduler import CenturionScheduler, SystemResources, MemoryPressureLevel
 
 from tests.conftest import MockAgentType
 
@@ -110,33 +110,33 @@ class TestProbeCacheTTL:
         assert result.ram_total_mb > 0
 
     def test_probe_system_uses_cache_within_ttl(self, scheduler):
-        """Within the 5s TTL, probe_system returns the cached object (same id)."""
+        """Within the 2s TTL, probe_system returns the cached object (same id)."""
         first = scheduler.probe_system()
         second = scheduler.probe_system()
         # Same object means cache was used, no re-probe
         assert first is second
 
     def test_probe_system_refreshes_after_ttl(self, scheduler):
-        """After the 5s TTL expires, probe_system fetches fresh data."""
+        """After the 2s TTL expires, probe_system fetches fresh data."""
         first = scheduler.probe_system()
-        # Simulate time passing beyond the 5s TTL by backdating the cache timestamp
-        scheduler._probe_cache_time = time.monotonic() - 6.0
+        # Simulate time passing beyond the 2s TTL by backdating the cache timestamp
+        scheduler._probe_cache_time = time.monotonic() - 3.0
         second = scheduler.probe_system()
         # A new object should have been created (different identity)
         assert first is not second
         assert isinstance(second, SystemResources)
 
     def test_probe_cache_respects_exact_boundary(self, scheduler):
-        """Cache is still valid at exactly 4.9s but stale at 5.1s."""
+        """Cache is still valid at exactly 1.9s but stale at 2.1s."""
         first = scheduler.probe_system()
 
-        # Still within TTL at 4.9s
-        scheduler._probe_cache_time = time.monotonic() - 4.9
+        # Still within TTL at 1.9s
+        scheduler._probe_cache_time = time.monotonic() - 1.9
         within_ttl = scheduler.probe_system()
         assert first is within_ttl
 
-        # Beyond TTL at 5.1s
-        scheduler._probe_cache_time = time.monotonic() - 5.1
+        # Beyond TTL at 2.1s
+        scheduler._probe_cache_time = time.monotonic() - 2.1
         beyond_ttl = scheduler.probe_system()
         assert first is not beyond_ttl
 
@@ -208,3 +208,207 @@ class TestAvailableSlots:
         sched.allocate(agent)  # over-allocate beyond hard limit
         slots = sched.available_slots(agent)
         assert slots >= 0
+
+
+# ---------------------------------------------------------------------------
+# MemoryPressureLevel enum tests
+# ---------------------------------------------------------------------------
+
+class TestMemoryPressureLevel:
+    def test_enum_has_normal(self):
+        assert MemoryPressureLevel.NORMAL.value == "normal"
+
+    def test_enum_has_warn(self):
+        assert MemoryPressureLevel.WARN.value == "warn"
+
+    def test_enum_has_critical(self):
+        assert MemoryPressureLevel.CRITICAL.value == "critical"
+
+    def test_enum_members_count(self):
+        """Exactly three members exist."""
+        assert set(MemoryPressureLevel) == {
+            MemoryPressureLevel.NORMAL,
+            MemoryPressureLevel.WARN,
+            MemoryPressureLevel.CRITICAL,
+        }
+
+
+# ---------------------------------------------------------------------------
+# _memory_pressure_level() tests
+# ---------------------------------------------------------------------------
+
+class TestMemoryPressureLevelDetection:
+    """Test _memory_pressure_level returns correct enum for sysctl output."""
+
+    def _mock_sysctl(self, level_str: str):
+        """Build a MagicMock that simulates sysctl returning level_str."""
+        mock_result = MagicMock()
+        mock_result.stdout = f"{level_str}\n"
+        return mock_result
+
+    @patch("centurion.core.scheduler.platform")
+    @patch("centurion.core.scheduler.subprocess.run")
+    def test_level_4_is_normal(self, mock_run, mock_platform):
+        mock_platform.system.return_value = "Darwin"
+        mock_run.return_value = self._mock_sysctl("4")
+        assert CenturionScheduler._memory_pressure_level() == MemoryPressureLevel.NORMAL
+
+    @patch("centurion.core.scheduler.platform")
+    @patch("centurion.core.scheduler.subprocess.run")
+    def test_level_2_is_warn(self, mock_run, mock_platform):
+        mock_platform.system.return_value = "Darwin"
+        mock_run.return_value = self._mock_sysctl("2")
+        assert CenturionScheduler._memory_pressure_level() == MemoryPressureLevel.WARN
+
+    @patch("centurion.core.scheduler.platform")
+    @patch("centurion.core.scheduler.subprocess.run")
+    def test_level_1_is_critical(self, mock_run, mock_platform):
+        mock_platform.system.return_value = "Darwin"
+        mock_run.return_value = self._mock_sysctl("1")
+        assert CenturionScheduler._memory_pressure_level() == MemoryPressureLevel.CRITICAL
+
+    @patch("centurion.core.scheduler.platform")
+    @patch("centurion.core.scheduler.subprocess.run")
+    def test_level_0_is_critical(self, mock_run, mock_platform):
+        """Level 0 (<=1) should also be CRITICAL."""
+        mock_platform.system.return_value = "Darwin"
+        mock_run.return_value = self._mock_sysctl("0")
+        assert CenturionScheduler._memory_pressure_level() == MemoryPressureLevel.CRITICAL
+
+    @patch("centurion.core.scheduler.platform")
+    def test_non_darwin_returns_normal(self, mock_platform):
+        mock_platform.system.return_value = "Linux"
+        assert CenturionScheduler._memory_pressure_level() == MemoryPressureLevel.NORMAL
+
+    @patch("centurion.core.scheduler.platform")
+    @patch("centurion.core.scheduler.subprocess.run", side_effect=Exception("fail"))
+    def test_exception_returns_normal(self, mock_run, mock_platform):
+        mock_platform.system.return_value = "Darwin"
+        assert CenturionScheduler._memory_pressure_level() == MemoryPressureLevel.NORMAL
+
+
+# ---------------------------------------------------------------------------
+# _ram_available_mb() tests — verifies inactive + purgeable pages included
+# ---------------------------------------------------------------------------
+
+class TestRamAvailableMb:
+    """Test that _ram_available_mb correctly parses vm_stat including inactive and purgeable."""
+
+    VM_STAT_OUTPUT = """\
+Mach Virtual Memory Statistics: (page size of 16384 bytes)
+Pages free:                               10000.
+Pages active:                             50000.
+Pages inactive:                            5000.
+Pages speculative:                         2000.
+Pages throttled:                              0.
+Pages wired down:                         30000.
+Pages purgeable:                           3000.
+"Translation faults":                  123456789.
+Pages copy-on-write:                    1234567.
+Pages zero filled:                     12345678.
+Pages reactivated:                       100000.
+Pages purged:                             50000.
+"""
+
+    @patch("centurion.core.scheduler.platform")
+    @patch("centurion.core.scheduler.subprocess.run")
+    def test_includes_inactive_and_purgeable(self, mock_run, mock_platform):
+        mock_platform.system.return_value = "Darwin"
+        mock_result = MagicMock()
+        mock_result.stdout = self.VM_STAT_OUTPUT
+        mock_run.return_value = mock_result
+
+        result = CenturionScheduler._ram_available_mb()
+
+        # free=10000, speculative=2000, inactive=5000, purgeable=3000
+        # total_pages = 20000, page_size = 16384
+        # bytes = 20000 * 16384 = 327,680,000
+        # MB = 327680000 // (1024*1024) = 312
+        expected = (20000 * 16384) // (1024 * 1024)
+        assert result == expected
+
+    @patch("centurion.core.scheduler.platform")
+    @patch("centurion.core.scheduler.subprocess.run")
+    def test_without_purgeable_line(self, mock_run, mock_platform):
+        """If purgeable line is missing, purgeable defaults to 0."""
+        mock_platform.system.return_value = "Darwin"
+        # Remove purgeable line
+        output = "\n".join(
+            line for line in self.VM_STAT_OUTPUT.splitlines()
+            if "purgeable" not in line.lower()
+        )
+        mock_result = MagicMock()
+        mock_result.stdout = output
+        mock_run.return_value = mock_result
+
+        result = CenturionScheduler._ram_available_mb()
+        # free=10000 + speculative=2000 + inactive=5000 + purgeable=0 = 17000
+        expected = (17000 * 16384) // (1024 * 1024)
+        assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# probe_system(force=True) bypasses cache
+# ---------------------------------------------------------------------------
+
+class TestProbeForceBypassesCache:
+    def test_force_returns_new_object(self, scheduler):
+        """probe_system(force=True) returns a fresh object even within TTL."""
+        first = scheduler.probe_system()
+        forced = scheduler.probe_system(force=True)
+        # force=True should create a new SystemResources object
+        assert first is not forced
+        assert isinstance(forced, SystemResources)
+
+
+# ---------------------------------------------------------------------------
+# Admission gate under memory pressure
+# ---------------------------------------------------------------------------
+
+class TestAdmissionGateWithPressure:
+    """can_schedule() and available_slots() reject work under memory pressure."""
+
+    @pytest.fixture
+    def sched(self):
+        config = CenturionConfig()
+        config.ram_headroom_gb = 0.0
+        config.max_agents_hard_limit = 10
+        return CenturionScheduler(config=config)
+
+    @pytest.fixture
+    def agent(self):
+        return MockAgentType()
+
+    # -- can_schedule ---------------------------------------------------------
+
+    @patch.object(CenturionScheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.WARN)
+    def test_can_schedule_false_on_warn(self, _mock, sched, agent):
+        """can_schedule returns False when pressure is WARN."""
+        assert sched.can_schedule(agent) is False
+
+    @patch.object(CenturionScheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.CRITICAL)
+    def test_can_schedule_false_on_critical(self, _mock, sched, agent):
+        """can_schedule returns False when pressure is CRITICAL."""
+        assert sched.can_schedule(agent) is False
+
+    @patch.object(CenturionScheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.NORMAL)
+    def test_can_schedule_true_on_normal(self, _mock, sched, agent):
+        """can_schedule returns True when pressure is NORMAL and resources available."""
+        assert sched.can_schedule(agent) is True
+
+    # -- available_slots ------------------------------------------------------
+
+    @patch.object(CenturionScheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.WARN)
+    def test_available_slots_zero_on_warn(self, _mock, sched, agent):
+        """available_slots returns 0 when pressure is WARN."""
+        assert sched.available_slots(agent) == 0
+
+    @patch.object(CenturionScheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.CRITICAL)
+    def test_available_slots_zero_on_critical(self, _mock, sched, agent):
+        """available_slots returns 0 when pressure is CRITICAL."""
+        assert sched.available_slots(agent) == 0
+
+    @patch.object(CenturionScheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.NORMAL)
+    def test_available_slots_positive_on_normal(self, _mock, sched, agent):
+        """available_slots returns > 0 when pressure is NORMAL and resources available."""
+        assert sched.available_slots(agent) > 0

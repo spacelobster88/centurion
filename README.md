@@ -12,6 +12,61 @@
 
 ---
 
+## Where Centurion Fits
+
+AI coding agents operate at three distinct layers. Understanding this hierarchy is key to choosing the right tool — and knowing when you need Centurion.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Layer 1: Claude Code Agent Loop (built-in)                          │
+│                                                                      │
+│  The inner loop. think → tool → observe → repeat.                    │
+│  One agent works on one task sequentially.                           │
+│  ✦ Scope: single file edit, bug fix, quick question                  │
+│  ✦ No parallelism — one tool call at a time                          │
+│  ✦ No persistent state across sessions                               │
+│  ✦ This is what you get out of the box with Claude Code.             │
+├─────────────────────────────────────────────────────────────────────┤
+│  Layer 2: Harness Loop (single-project orchestrator)                 │
+│                                                                      │
+│  An outer loop that rides on Layer 1. Customizable "Ralph Loop"      │
+│  implementation — decomposes a project into a task DAG and           │
+│  dispatches independent tasks to background subagents.               │
+│  ✦ Scope: one project (e.g., "build a REST API", "write a report")  │
+│  ✦ Up to ~6 parallel subagents via Claude Code's Agent tool          │
+│  ✦ Persistent state in .harness/tasks.json (survives restarts)       │
+│  ✦ Phase-based progression: requirements → design → build → QA       │
+│  ✦ Can run standalone OR query Centurion for smarter scheduling      │
+├─────────────────────────────────────────────────────────────────────┤
+│  Layer 3: Centurion (fleet coordinator)            ◀── YOU ARE HERE  │
+│                                                                      │
+│  The fleet layer. Manages 100+ agents across multiple projects.      │
+│  ✦ Scope: entire machine — multiple projects running simultaneously  │
+│  ✦ Hardware-aware scheduling prevents OOM (K8s-style admission ctrl) │
+│  ✦ Real-time broadcasting: update all agents mid-execution           │
+│  ✦ Event streaming via WebSocket (Aquilifer event bus)               │
+│  ✦ Auto-scaling (Optio) adjusts fleet size based on resources        │
+│  ✦ 5 integration methods: REST API, MCP, Skill, A2A, Python library │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+| | Agent Loop | Harness Loop | Centurion |
+|---|---|---|---|
+| **Scope** | Single task | Single project | Multiple projects / fleets |
+| **Parallelism** | 1 (sequential) | ~6 subagents | **100+ agents** |
+| **State** | In-memory only | `.harness/` files | SQLite + in-memory |
+| **Scheduling** | None | DAG-based | **Hardware-aware, K8s-style** |
+| **Cross-project coordination** | No | No | **Yes** |
+| **Auto-scaling** | No | No | **Yes (Optio)** |
+| **Broadcasting** | No | No | **Yes (all/legion/century)** |
+| **When to use** | Quick fixes | Structured projects | Large-scale parallel work |
+
+> **These three layers are complementary, not competing.** Harness Loop can run standalone (using `vm_stat` for local resource checks), but when Centurion is running, Harness Loop automatically queries Centurion's `/api/scheduler` for resource-aware scheduling — available RAM, memory pressure, and active agent count — so multiple projects never fight for the same resources.
+
+> **Getting started?** Use [Armory](https://github.com/spacelobster88/armory) to set up the full stack (Centurion + Harness Loop + Claude gateway) on a fresh Mac in one command.
+
+---
+
 ## Overview
 
 Centurion is an AI agent orchestration engine that manages fleets of AI agents at scale. While most frameworks stop at 1-2 agents, Centurion scales to **100+ concurrent agents** with hardware-aware scheduling, real-time broadcasting, and five integration methods.

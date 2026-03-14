@@ -205,3 +205,199 @@ async def test_optio_loop_survives_exception(mock_agent_type):
 
     # The loop should have survived 2 exceptions and run _optio_check 3 times total
     assert call_count == 3, f"Expected 3 calls to _optio_check, got {call_count}"
+
+
+# --- Memory-pressure scale-down tests (Optio) ---
+
+
+from centurion.core.scheduler import CenturionScheduler, MemoryPressureLevel
+from centurion.core.events import EventBus
+
+
+def _make_century_with_idle_legionaries(
+    mock_agent_type, n_legionaries: int, min_legionaries: int = 2,
+    scheduler: CenturionScheduler | None = None,
+    event_bus: EventBus | None = None,
+):
+    """Helper: create a Century with n idle legionaries (no real spawning)."""
+    from centurion.core.legionary import Legionary
+
+    config = CenturyConfig(
+        min_legionaries=min_legionaries,
+        max_legionaries=10,
+        autoscale=True,
+    )
+    century = Century(
+        century_id="cent-mem",
+        config=config,
+        agent_type=mock_agent_type,
+        scheduler=scheduler,
+        event_bus=event_bus,
+    )
+    for i in range(n_legionaries):
+        leg = Legionary(century_id="cent-mem", agent_type=mock_agent_type)
+        leg.status = LegionaryStatus.IDLE
+        leg.handle = {"legionary_id": leg.id}
+        century.legionaries[leg.id] = leg
+    return century
+
+
+async def test_memory_pressure_critical_terminates_all_idle(mock_agent_type):
+    """CRITICAL pressure terminates ALL idle legionaries, even below min_legionaries."""
+    scheduler = CenturionScheduler()
+    century = _make_century_with_idle_legionaries(
+        mock_agent_type, n_legionaries=4, min_legionaries=3, scheduler=scheduler,
+    )
+
+    assert len(century.legionaries) == 4
+
+    with patch.object(
+        scheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.CRITICAL
+    ):
+        await century._memory_pressure_scale_down()
+
+    # ALL idle should be terminated, even though min_legionaries=3
+    assert len(century.legionaries) == 0
+
+
+async def test_memory_pressure_warn_terminates_above_min(mock_agent_type):
+    """WARN pressure terminates idle legionaries above min_legionaries only."""
+    scheduler = CenturionScheduler()
+    century = _make_century_with_idle_legionaries(
+        mock_agent_type, n_legionaries=5, min_legionaries=2, scheduler=scheduler,
+    )
+
+    assert len(century.legionaries) == 5
+
+    with patch.object(
+        scheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.WARN
+    ):
+        await century._memory_pressure_scale_down()
+
+    # Should keep min_legionaries=2, remove excess (5-2=3)
+    assert len(century.legionaries) == 2
+
+
+async def test_memory_pressure_warn_no_removal_at_min(mock_agent_type):
+    """WARN pressure does NOT remove legionaries when already at min_legionaries."""
+    scheduler = CenturionScheduler()
+    century = _make_century_with_idle_legionaries(
+        mock_agent_type, n_legionaries=2, min_legionaries=2, scheduler=scheduler,
+    )
+
+    with patch.object(
+        scheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.WARN
+    ):
+        await century._memory_pressure_scale_down()
+
+    assert len(century.legionaries) == 2
+
+
+async def test_memory_pressure_normal_does_nothing(mock_agent_type):
+    """NORMAL pressure performs no scale-down."""
+    scheduler = CenturionScheduler()
+    century = _make_century_with_idle_legionaries(
+        mock_agent_type, n_legionaries=5, min_legionaries=2, scheduler=scheduler,
+    )
+
+    with patch.object(
+        scheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.NORMAL
+    ):
+        await century._memory_pressure_scale_down()
+
+    assert len(century.legionaries) == 5
+
+
+async def test_memory_scale_down_cooldown_blocks_scale_up(mock_agent_type):
+    """After memory scale-down, _optio_check() should NOT scale up within 30s."""
+    scheduler = CenturionScheduler()
+    century = _make_century_with_idle_legionaries(
+        mock_agent_type, n_legionaries=4, min_legionaries=2, scheduler=scheduler,
+    )
+
+    # Phase 1: trigger a CRITICAL scale-down to set _last_memory_scale_time
+    with patch.object(
+        scheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.CRITICAL
+    ):
+        await century._memory_pressure_scale_down()
+
+    assert len(century.legionaries) == 0
+
+    # Phase 2: pressure returns to NORMAL, but 30s cooldown should block scale-up.
+    # Add tasks to the queue to trigger scale-up desire.
+    loop = asyncio.get_running_loop()
+    for i in range(5):
+        future = loop.create_future()
+        century.task_queue.put_nowait((5, 0.0, f"task-{i}", "prompt", future))
+
+    # Re-add some legionaries so there's something to work with
+    century_orig_legionaries = _make_century_with_idle_legionaries(
+        mock_agent_type, n_legionaries=1, min_legionaries=2, scheduler=scheduler,
+    )
+    century.legionaries.update(century_orig_legionaries.legionaries)
+
+    # Mock time so we are only 10s after scale-down (within 30s cooldown)
+    scale_time = century._last_memory_scale_time
+    with (
+        patch.object(
+            scheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.NORMAL,
+        ),
+        patch("centurion.core.century.time") as mock_time,
+    ):
+        mock_time.time.return_value = scale_time + 10.0  # only 10s later
+
+        initial_count = len(century.legionaries)
+        await century._optio_check()
+
+        # No scale-up should have happened — cooldown still active
+        assert len(century.legionaries) == initial_count
+
+    # Now simulate time past cooldown (31s later)
+    with (
+        patch.object(
+            scheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.NORMAL,
+        ),
+        patch("centurion.core.century.time") as mock_time,
+        patch.object(scheduler, "available_slots", return_value=5),
+        patch.object(scheduler, "can_schedule", return_value=True),
+        patch.object(scheduler, "allocate"),
+    ):
+        mock_time.time.return_value = scale_time + 31.0  # past cooldown
+
+        await century._optio_check()
+
+        # Scale-up should now proceed — more legionaries added
+        assert len(century.legionaries) > initial_count
+
+
+async def test_memory_scale_down_emits_event(mock_agent_type):
+    """Scale-down events are emitted with correct payload (pressure level, count removed)."""
+    scheduler = CenturionScheduler()
+    event_bus = AsyncMock(spec=EventBus)
+    century = _make_century_with_idle_legionaries(
+        mock_agent_type,
+        n_legionaries=4,
+        min_legionaries=2,
+        scheduler=scheduler,
+        event_bus=event_bus,
+    )
+
+    with patch.object(
+        scheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.CRITICAL
+    ):
+        await century._memory_pressure_scale_down()
+
+    # Find the memory_scale_down event among all emitted events
+    memory_events = [
+        call for call in event_bus.emit.call_args_list
+        if call.args[0] == "memory_scale_down"
+    ]
+    assert len(memory_events) == 1
+
+    call = memory_events[0]
+    assert call.kwargs["entity_type"] == "century"
+    assert call.kwargs["entity_id"] == "cent-mem"
+    payload = call.kwargs["payload"]
+    assert payload["pressure"] == "critical"
+    assert payload["removed"] == 4
+    assert payload["remaining"] == 0

@@ -42,7 +42,7 @@ class CenturionConfig:
     )
     ram_headroom_gb: float = field(
         default_factory=lambda: float(os.getenv("CENTURION_RAM_HEADROOM_GB", "2.0"))
-    )
+    )  # Used as base value for dynamic headroom scaling under memory pressure
 
     # Autoscaling
     autoscale_check_interval: float = 10.0
