@@ -3,1110 +3,1534 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Centurion — AI Agent Orchestration Engine</title>
-  <meta name="description" content="Spawn and command an army of AI agents with Roman military precision. Scale to 100+ concurrent agents with hardware-aware scheduling.">
-  <meta property="og:title" content="Centurion — AI Agent Orchestration Engine">
-  <meta property="og:description" content="Scale to 100+ concurrent AI agents with K8s-inspired scheduling, real-time broadcasting, and 5 integration methods.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://spacelobster88.github.io/centurion/">
+  <title>Centurion — AI Gateway</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    /* ============================================
+       CSS DESIGN SYSTEM
+       ============================================ */
+
     :root {
-      --bg: #0a0a0f;
-      --bg2: #12121a;
-      --bg3: #1a1a2e;
-      --gold: #d4a843;
-      --gold-dim: #a8842f;
-      --red: #c0392b;
-      --red-bright: #e74c3c;
-      --green: #27ae60;
-      --blue: #3498db;
-      --purple: #9b59b6;
-      --text: #e8e8f0;
-      --text-dim: #8888a0;
-      --border: #2a2a3e;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
-    a { color: var(--gold); text-decoration: none; }
-    a:hover { color: var(--gold-dim); text-decoration: underline; }
-    code, pre {
-      font-family: 'JetBrains Mono', monospace;
+      /* Colors */
+      --color-bg-primary:       #141414;
+      --color-bg-surface:       #1c1c1e;
+      --color-border:           #2a2a2c;
+      --color-text-primary:     #f0efe8;
+      --color-text-muted:       #8a8a82;
+      --color-accent:           #d97757;
+      --color-accent-hover:     #e08b6e;
+      --color-success:          #5a9a6a;
+      --color-info:             #6a8fbd;
+      --color-overlay:          rgba(20, 20, 20, 0.85);
+      --color-text-primary-a50: rgba(240, 239, 232, 0.5);
+
+      /* Typography */
+      --font-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      --font-mono:  'JetBrains Mono', 'SF Mono', 'Fira Code', 'Consolas', monospace;
+
+      --text-xs:    0.75rem;
+      --text-sm:    0.875rem;
+      --text-base:  1rem;
+      --text-lg:    1.125rem;
+      --text-xl:    1.25rem;
+      --text-2xl:   1.5rem;
+      --text-3xl:   clamp(1.875rem, 4vw, 2.5rem);
+      --text-hero:  clamp(2.5rem, 6vw, 4rem);
+
+      --weight-regular:   400;
+      --weight-medium:    500;
+      --weight-semibold:  600;
+
+      --leading-tight:    1.2;
+      --leading-normal:   1.6;
+      --leading-relaxed:  1.8;
+
+      --tracking-tight:  -0.02em;
+      --tracking-normal:  0;
+      --tracking-wide:    0.05em;
+
+      /* Spacing */
+      --space-1:    0.25rem;
+      --space-2:    0.5rem;
+      --space-3:    0.75rem;
+      --space-4:    1rem;
+      --space-6:    1.5rem;
+      --space-8:    2rem;
+      --space-12:   3rem;
+      --space-16:   4rem;
+      --space-24:   6rem;
+      --space-32:   8rem;
+
+      /* Layout */
+      --max-width:  64rem;
+      --page-padding: clamp(1rem, 5vw, 4rem);
+
+      /* Transitions */
+      --transition-fast: 150ms ease;
+      --transition-base: 200ms ease;
+
+      /* Border Radius */
+      --radius-sm:  0.25rem;
+      --radius-md:  0.375rem;
+      --radius-lg:  0.5rem;
     }
 
-    /* Hero */
-    .hero {
+    /* ============================================
+       RESET & BASE
+       ============================================ */
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      font-size: var(--text-base);
+      font-weight: var(--weight-regular);
+      line-height: var(--leading-normal);
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-primary);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    img, svg {
+      display: block;
+      max-width: 100%;
+    }
+
+    /* ============================================
+       LAYOUT
+       ============================================ */
+
+    .container {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding-left: var(--page-padding);
+      padding-right: var(--page-padding);
+    }
+
+    /* ============================================
+       TAB NAVIGATION
+       ============================================ */
+
+    .tab-nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: var(--color-bg-surface);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .tab-nav-inner {
+      display: flex;
+      gap: var(--space-8);
+      overflow-x: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    .tab-nav-inner::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab-btn {
       position: relative;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 2rem;
-      overflow: hidden;
-    }
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: radial-gradient(circle at 50% 50%, rgba(212,168,67,0.06) 0%, transparent 50%),
-                  radial-gradient(circle at 80% 20%, rgba(192,57,43,0.04) 0%, transparent 40%);
-      animation: pulse 8s ease-in-out infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); opacity: 0.8; }
-      50% { transform: scale(1.05); opacity: 1; }
-    }
-    .hero-content { position: relative; z-index: 1; max-width: 900px; }
-    .hero-badge {
-      display: inline-block;
-      padding: 6px 16px;
-      background: rgba(212,168,67,0.1);
-      border: 1px solid rgba(212,168,67,0.3);
-      border-radius: 100px;
-      font-size: 0.85rem;
-      color: var(--gold);
-      margin-bottom: 1.5rem;
-      letter-spacing: 0.5px;
-    }
-    .hero h1 {
-      font-size: clamp(3rem, 8vw, 5.5rem);
-      font-weight: 900;
-      letter-spacing: -2px;
-      line-height: 1.1;
-      margin-bottom: 1rem;
-    }
-    .hero h1 span { color: var(--gold); }
-    .hero p.tagline {
-      font-size: 1.3rem;
-      color: var(--text-dim);
-      max-width: 650px;
-      margin: 0 auto 2rem;
-    }
-    .hero-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .btn {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      padding: 14px 28px;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 1rem;
-      transition: all 0.2s;
+      padding: var(--space-4) 0;
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+      color: var(--color-text-muted);
+      background: none;
       border: none;
       cursor: pointer;
+      white-space: nowrap;
+      outline: none;
     }
-    .btn-primary {
-      background: var(--gold);
-      color: #000;
-    }
-    .btn-primary:hover { background: var(--gold-dim); text-decoration: none; color: #000; }
-    .btn-secondary {
-      background: transparent;
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-    .btn-secondary:hover { border-color: var(--gold); color: var(--gold); text-decoration: none; }
 
-    .hero-stats {
+    .tab-btn::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: transparent;
+    }
+
+    .tab-btn.active {
+      color: var(--color-text-primary);
+    }
+
+    .tab-btn.active::after {
+      background-color: var(--color-accent);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .tab-btn {
+        transition: color var(--transition-fast);
+      }
+
+      .tab-btn::after {
+        transition: background-color var(--transition-fast);
+      }
+    }
+
+    .tab-btn:hover {
+      color: var(--color-text-primary);
+    }
+
+    .tab-btn:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+
+    /* ============================================
+       TAB CONTENT
+       ============================================ */
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .tab-content.active {
+        animation: tabFadeIn 150ms ease;
+      }
+
+      @keyframes tabFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+    }
+
+    /* ============================================
+       TYPOGRAPHY UTILITIES
+       ============================================ */
+
+    .text-hero {
+      font-size: var(--text-hero);
+      font-weight: var(--weight-semibold);
+      line-height: var(--leading-tight);
+      letter-spacing: var(--tracking-tight);
+      color: var(--color-text-primary);
+    }
+
+    .text-heading {
+      font-size: var(--text-3xl);
+      font-weight: var(--weight-semibold);
+      line-height: var(--leading-tight);
+      color: var(--color-text-primary);
+    }
+
+    .text-section-heading {
+      font-size: var(--text-2xl);
+      font-weight: var(--weight-semibold);
+      color: var(--color-text-primary);
+    }
+
+    .text-subtitle {
+      font-size: var(--text-xl);
+      font-weight: var(--weight-medium);
+      color: var(--color-text-primary);
+    }
+
+    .text-body {
+      font-size: var(--text-base);
+      font-weight: var(--weight-regular);
+      line-height: var(--leading-normal);
+      color: var(--color-text-primary);
+      max-width: 65ch;
+    }
+
+    .text-muted {
+      color: var(--color-text-muted);
+    }
+
+    .text-label {
+      font-size: var(--text-xs);
+      font-weight: var(--weight-medium);
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+    }
+
+    .text-lead {
+      font-size: var(--text-lg);
+      font-weight: var(--weight-regular);
+      color: var(--color-text-muted);
+      max-width: 50ch;
+    }
+
+    /* ============================================
+       BUTTONS
+       ============================================ */
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--space-3) var(--space-6);
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+      color: var(--color-bg-primary);
+      background-color: var(--color-accent);
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--space-3) 0;
+      font-family: var(--font-sans);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+      color: var(--color-text-primary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .btn-primary {
+        transition: background-color var(--transition-fast);
+      }
+
+      .btn-secondary {
+        transition: color var(--transition-fast);
+      }
+    }
+
+    .btn-primary:hover {
+      background-color: var(--color-accent-hover);
+    }
+
+    .btn-secondary:hover {
+      color: var(--color-accent);
+    }
+
+    .btn-primary:focus-visible,
+    .btn-secondary:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+
+    /* ============================================
+       CARDS
+       ============================================ */
+
+    .card {
+      background-color: var(--color-bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .card {
+        transition: border-color var(--transition-base);
+      }
+    }
+
+    .card:hover {
+      border-color: rgba(138, 138, 130, 0.3);
+    }
+
+    .card-label {
+      font-size: var(--text-xs);
+      font-weight: var(--weight-medium);
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-2);
+    }
+
+    .card-title {
+      font-size: var(--text-lg);
+      font-weight: var(--weight-medium);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-2);
+    }
+
+    .card-description {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+
+    .card-metrics {
       display: flex;
-      gap: 3rem;
+      gap: var(--space-6);
+      margin-top: var(--space-4);
+    }
+
+    .card-metric-label {
+      font-size: var(--text-xs);
+      text-transform: uppercase;
+      letter-spacing: var(--tracking-wide);
+      color: var(--color-text-muted);
+    }
+
+    .card-metric-value {
+      font-size: var(--text-sm);
+      font-weight: var(--weight-medium);
+      color: var(--color-text-primary);
+    }
+
+    /* ============================================
+       METRICS BAR
+       ============================================ */
+
+    .metrics-bar {
+      display: flex;
       justify-content: center;
-      margin-top: 3rem;
+      align-items: center;
+      gap: var(--space-8);
       flex-wrap: wrap;
     }
-    .hero-stat { text-align: center; }
-    .hero-stat .num {
-      font-size: 2.2rem;
-      font-weight: 800;
-      color: var(--gold);
-      display: block;
-    }
-    .hero-stat .label {
-      font-size: 0.85rem;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
 
-    /* Sections */
-    section {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 5rem 2rem;
-    }
-    .section-title {
-      font-size: 2.2rem;
-      font-weight: 800;
-      margin-bottom: 0.5rem;
-      letter-spacing: -1px;
-    }
-    .section-subtitle {
-      color: var(--text-dim);
-      font-size: 1.1rem;
-      margin-bottom: 3rem;
-    }
-
-    /* Success Story */
-    .story-card {
-      background: linear-gradient(135deg, var(--bg2) 0%, var(--bg3) 100%);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 3rem;
-      position: relative;
-      overflow: hidden;
-    }
-    .story-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--red), var(--gold), var(--green));
-    }
-    .story-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 1.5rem;
-    }
-    .story-badge {
-      background: rgba(39,174,96,0.15);
-      color: var(--green);
-      padding: 4px 12px;
-      border-radius: 100px;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-    .story-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-    }
-    .story-desc {
-      color: var(--text-dim);
-      margin-bottom: 2rem;
-      font-size: 1.05rem;
-      line-height: 1.8;
-    }
-    .story-metrics {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    .metric-card {
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
+    .metric {
       text-align: center;
     }
-    .metric-card .val {
-      font-size: 2rem;
-      font-weight: 800;
-      display: block;
-    }
-    .metric-card .val.gold { color: var(--gold); }
-    .metric-card .val.green { color: var(--green); }
-    .metric-card .val.blue { color: var(--blue); }
-    .metric-card .val.purple { color: var(--purple); }
-    .metric-card .val.red { color: var(--red-bright); }
-    .metric-card .desc {
-      font-size: 0.8rem;
-      color: var(--text-dim);
-      margin-top: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .story-timeline {
-      border-left: 2px solid var(--border);
-      padding-left: 1.5rem;
-      margin-top: 2rem;
-    }
-    .timeline-item {
-      position: relative;
-      margin-bottom: 1.2rem;
-    }
-    .timeline-item::before {
-      content: '';
-      position: absolute;
-      left: -1.75rem;
-      top: 8px;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--gold);
-    }
-    .timeline-item .time {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      color: var(--gold);
-    }
-    .timeline-item .event {
-      color: var(--text-dim);
-      font-size: 0.95rem;
+
+    .metric-value {
+      font-size: var(--text-2xl);
+      font-weight: var(--weight-semibold);
+      color: var(--color-text-primary);
     }
 
-    /* Comparison */
+    .metric-label {
+      font-size: var(--text-xs);
+      font-weight: var(--weight-medium);
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+    }
+
+    .metric-divider {
+      width: 1px;
+      height: 40px;
+      background-color: var(--color-border);
+    }
+
+    @media (max-width: 640px) {
+      .metrics-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-6);
+      }
+
+      .metric-divider {
+        display: none;
+      }
+    }
+
+    /* ============================================
+       CODE BLOCKS
+       ============================================ */
+
+    .code-block {
+      background-color: var(--color-bg-primary);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-3) var(--space-4);
+      overflow-x: auto;
+    }
+
+    .code-block code {
+      font-family: var(--font-mono);
+      font-size: var(--text-sm);
+      line-height: var(--leading-relaxed);
+      color: rgba(240, 239, 232, 0.9);
+      white-space: pre;
+    }
+
+    .code-block .comment {
+      color: var(--color-text-muted);
+    }
+
+    /* ============================================
+       COMPARISON TABLE
+       ============================================ */
+
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .comparison-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.95rem;
+      font-size: var(--text-sm);
     }
-    .comparison-table th {
+
+    .comparison-table thead th {
+      font-size: var(--text-xs);
+      font-weight: var(--weight-medium);
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--color-text-muted);
       text-align: left;
-      padding: 12px 16px;
-      background: var(--bg3);
-      border-bottom: 2px solid var(--gold);
-      font-weight: 600;
-    }
-    .comparison-table th:first-child { border-radius: 8px 0 0 0; }
-    .comparison-table th:last-child { border-radius: 0 8px 0 0; }
-    .comparison-table td {
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border);
-    }
-    .comparison-table tr:hover td { background: rgba(212,168,67,0.03); }
-    .comparison-table .feature { font-weight: 500; }
-    .check { color: var(--green); font-size: 1.2rem; }
-    .cross { color: #555; font-size: 1.2rem; }
-    .highlight-col {
-      background: rgba(212,168,67,0.05);
-      border-left: 2px solid var(--gold);
-      border-right: 2px solid var(--gold);
-    }
-    .highlight-col-header {
-      background: rgba(212,168,67,0.15) !important;
-      color: var(--gold) !important;
-      border-left: 2px solid var(--gold);
-      border-right: 2px solid var(--gold);
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid rgba(138, 138, 130, 0.3);
     }
 
-    /* Features grid */
-    .features-grid {
+    .comparison-table tbody td {
+      padding: var(--space-3) var(--space-4);
+      color: var(--color-text-primary);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .comparison-table tbody td:first-child {
+      font-weight: var(--weight-medium);
+    }
+
+    .comparison-table .col-highlight {
+      background-color: var(--color-bg-surface);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .comparison-table tbody tr {
+        transition: background-color var(--transition-fast);
+      }
+    }
+
+    .comparison-table tbody tr:hover {
+      background-color: var(--color-bg-surface);
+    }
+
+    @media (max-width: 640px) {
+      .comparison-table thead th:first-child,
+      .comparison-table tbody td:first-child {
+        position: sticky;
+        left: 0;
+        background-color: var(--color-bg-primary);
+        z-index: 1;
+      }
+
+      .comparison-table tbody tr:hover td:first-child {
+        background-color: var(--color-bg-surface);
+      }
+    }
+
+    /* ============================================
+       CARD GRID
+       ============================================ */
+
+    .card-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 1.5rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-6);
     }
-    .feature-card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 2rem;
-      transition: border-color 0.2s;
-    }
-    .feature-card:hover { border-color: var(--gold); }
-    .feature-icon {
-      font-size: 2rem;
-      margin-bottom: 1rem;
-    }
-    .feature-card h3 {
-      font-size: 1.15rem;
-      margin-bottom: 0.5rem;
-    }
-    .feature-card p {
-      color: var(--text-dim);
-      font-size: 0.95rem;
-    }
-
-    /* Integration badges */
-    .integration-row {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin: 2rem 0;
-    }
-    .int-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 20px;
-      font-weight: 500;
-      font-size: 0.95rem;
-      transition: border-color 0.2s;
-    }
-    .int-badge:hover { border-color: var(--gold); }
-    .int-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-    .int-dot.green { background: var(--green); }
-    .int-dot.blue { background: var(--blue); }
-    .int-dot.purple { background: var(--purple); }
-    .int-dot.gold { background: var(--gold); }
-    .int-dot.red { background: var(--red-bright); }
-
-    /* Code block */
-    .code-block {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
-      overflow-x: auto;
-      font-size: 0.9rem;
-      line-height: 1.7;
-      margin: 1.5rem 0;
-    }
-    .code-block code { color: var(--text); }
-    .code-comment { color: #6a6a8a; }
-    .code-cmd { color: var(--gold); }
-    .code-flag { color: var(--blue); }
-    .code-str { color: var(--green); }
-
-    /* Architecture */
-    .arch-block {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 2rem;
-      overflow-x: auto;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      line-height: 1.5;
-      color: var(--text-dim);
-      text-align: center;
-    }
-    .arch-block pre { display: inline-block; text-align: left; }
-
-    /* CTA */
-    .cta-section {
-      text-align: center;
-      padding: 5rem 2rem;
-      background: linear-gradient(180deg, transparent 0%, rgba(212,168,67,0.03) 100%);
-    }
-    .cta-section h2 {
-      font-size: 2.5rem;
-      font-weight: 800;
-      margin-bottom: 1rem;
-    }
-    .cta-section p {
-      color: var(--text-dim);
-      font-size: 1.1rem;
-      margin-bottom: 2rem;
-    }
-
-    /* Footer */
-    footer {
-      text-align: center;
-      padding: 2rem;
-      color: var(--text-dim);
-      font-size: 0.85rem;
-      border-top: 1px solid var(--border);
-    }
-
-    /* Nav */
-    nav {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(10,10,15,0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-    }
-    nav .logo {
-      font-weight: 800;
-      font-size: 1.2rem;
-      color: var(--gold);
-      letter-spacing: -0.5px;
-    }
-    nav .nav-links { display: flex; gap: 2rem; }
-    nav .nav-links a {
-      color: var(--text-dim);
-      font-size: 0.9rem;
-      font-weight: 500;
-    }
-    nav .nav-links a:hover { color: var(--gold); text-decoration: none; }
 
     @media (max-width: 768px) {
-      .hero h1 { font-size: 2.5rem; }
-      .hero-stats { gap: 1.5rem; }
-      .hero-stat .num { font-size: 1.6rem; }
-      nav .nav-links { display: none; }
-      .story-card { padding: 1.5rem; }
-      .comparison-table { font-size: 0.8rem; }
-      .comparison-table td, .comparison-table th { padding: 8px; }
+      .card-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .card-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ============================================
+       SECTION SPACING
+       ============================================ */
+
+    .section {
+      padding-top: var(--space-24);
+      padding-bottom: var(--space-24);
+    }
+
+    .section + .section {
+      padding-top: 0;
+    }
+
+    .section-header {
+      margin-bottom: var(--space-8);
+    }
+
+    .section-header .text-label {
+      margin-bottom: var(--space-4);
+    }
+
+    /* ============================================
+       HERO
+       ============================================ */
+
+    .hero-wrapper {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero {
+      padding-top: var(--space-32);
+      padding-bottom: var(--space-24);
+    }
+
+    .hero-label {
+      display: inline-block;
+      padding-left: var(--space-3);
+      border-left: 2px solid var(--color-accent);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-medium);
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-4);
+    }
+
+    .hero .text-hero {
+      margin-bottom: var(--space-6);
+    }
+
+    .hero .text-lead {
+      margin-bottom: var(--space-8);
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-6);
+      flex-wrap: wrap;
+    }
+
+    /* ============================================
+       STEPS (Quick Start)
+       ============================================ */
+
+    .steps {
+      max-width: 40rem;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .step {
+      position: relative;
+      padding-left: var(--space-12);
+      padding-bottom: var(--space-8);
+    }
+
+    .step:last-child {
+      padding-bottom: 0;
+    }
+
+    .step::before {
+      content: '';
+      position: absolute;
+      left: 0.75rem;
+      top: 2rem;
+      bottom: 0;
+      width: 1px;
+      background-color: var(--color-border);
+    }
+
+    .step:last-child::before {
+      display: none;
+    }
+
+    .step-number {
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-size: var(--text-2xl);
+      font-weight: var(--weight-semibold);
+      color: var(--color-accent);
+      line-height: 1;
+    }
+
+    .step-title {
+      font-size: var(--text-xl);
+      font-weight: var(--weight-medium);
+      color: var(--color-text-primary);
+      margin-bottom: var(--space-4);
+    }
+
+    .step-description {
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-4);
+    }
+
+    /* ============================================
+       FOOTER
+       ============================================ */
+
+    .site-footer {
+      border-top: 1px solid var(--color-border);
+      padding: var(--space-12) 0;
+      text-align: center;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: var(--space-4);
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-4);
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      color: var(--color-text-muted);
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .footer-links a {
+        transition: color var(--transition-fast);
+      }
+    }
+
+    .footer-links a:hover {
+      color: var(--color-text-primary);
+      text-decoration: underline;
+    }
+
+    .footer-separator {
+      color: var(--color-text-muted);
+    }
+
+    .footer-copyright {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+    }
+
+    .footer-disclaimer {
+      font-size: var(--text-xs);
+      color: var(--color-text-muted);
+      margin-top: var(--space-2);
+    }
+
+    /* ============================================
+       INLINE LINKS
+       ============================================ */
+
+    @media (prefers-reduced-motion: no-preference) {
+      .inline-link {
+        transition: color var(--transition-fast);
+      }
+    }
+
+    .inline-link:hover {
+      color: var(--color-accent);
+    }
+
+    /* ============================================
+       CASE STUDY PILLS
+       ============================================ */
+
+    .cs-pill {
+      padding: var(--space-2) var(--space-4);
+      font-family: var(--font-sans);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-medium);
+      color: var(--color-text-muted);
+      background-color: transparent;
+      border: 1px solid var(--color-border);
+      border-radius: 9999px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .cs-pill {
+        transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+      }
+
+      .cs-panel.active {
+        animation: tabFadeIn 150ms ease;
+      }
+    }
+
+    .cs-pill.active {
+      color: var(--color-text-primary);
+      background-color: var(--color-bg-surface);
+      border-color: var(--color-accent);
+    }
+
+    .cs-pill:hover {
+      color: var(--color-text-primary);
+      border-color: var(--color-accent);
+    }
+
+    /* ============================================
+       REDUCED MOTION
+       ============================================ */
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
   </style>
 </head>
 <body>
 
-<nav>
-  <div class="logo">CENTURION</div>
-  <div class="nav-links">
-    <a href="#why">Why Centurion</a>
-    <a href="#features">Features</a>
-    <a href="#harness">Harness Loop</a>
-    <a href="#quickstart">Quick Start</a>
-    <a href="#links">Links</a>
-    <a href="https://github.com/spacelobster88/centurion">GitHub</a>
-  </div>
-</nav>
-
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-content">
-    <div class="hero-badge">Open Source &middot; MIT License &middot; Python 3.12+</div>
-    <h1><span>Centurion</span></h1>
-    <p class="tagline">Spawn and command an army of AI agents with Roman military precision. Scale to 100+ concurrent agents with hardware-aware scheduling.</p>
-    <div class="hero-buttons">
-      <a href="https://github.com/spacelobster88/centurion" class="btn btn-primary">
-        View on GitHub
-      </a>
-      <a href="#story" class="btn btn-secondary">
-        See Case Study
-      </a>
+  <!-- ============================================
+       TAB NAVIGATION
+       ============================================ -->
+  <nav class="tab-nav" role="tablist" aria-label="Main navigation">
+    <div class="container tab-nav-inner">
+      <button class="tab-btn active" id="btn-tab-overview" role="tab" aria-selected="true" aria-controls="tab-overview" data-tab="tab-overview">Overview</button>
+      <button class="tab-btn" id="btn-tab-case-studies" role="tab" aria-selected="false" aria-controls="tab-case-studies" data-tab="tab-case-studies">Case Studies</button>
+      <button class="tab-btn" id="btn-tab-quick-start" role="tab" aria-selected="false" aria-controls="tab-quick-start" data-tab="tab-quick-start">Quick Start</button>
+      <button class="tab-btn" id="btn-tab-comparison" role="tab" aria-selected="false" aria-controls="tab-comparison" data-tab="tab-comparison">Comparison</button>
     </div>
-    <div class="hero-stats">
-      <div class="hero-stat">
-        <span class="num">100+</span>
-        <span class="label">Concurrent Agents</span>
+  </nav>
+
+  <!-- ============================================
+       MAIN CONTENT
+       ============================================ -->
+  <main>
+
+    <!-- TAB: OVERVIEW CONTENT START -->
+    <div id="tab-overview" class="tab-content active" role="tabpanel" aria-labelledby="btn-tab-overview">
+
+      <!-- Hero -->
+      <div class="hero-wrapper">
+        <div class="container">
+          <div class="hero">
+            <div class="hero-label">Open Source</div>
+            <h1 class="text-hero">Centurion</h1>
+            <p class="text-subtitle" style="margin-bottom: var(--space-6);">Resource-aware orchestration for AI agent fleets</p>
+            <p class="text-lead">Spawn, schedule, and manage 100+ AI agents with hardware-aware admission control. The infrastructure layer that Claude Code doesn't have.</p>
+            <div class="hero-actions">
+              <a href="#tab-quick-start" class="btn-primary" data-tab-link="tab-quick-start">Get Started</a>
+              <a href="https://github.com/spacelobster88/centurion" class="btn-secondary">GitHub &rarr;</a>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="hero-stat">
-        <span class="num">298</span>
-        <span class="label">Tests Passing</span>
+
+      <!-- Metrics Bar -->
+      <div class="container" style="padding-bottom: var(--space-24);">
+        <div class="metrics-bar">
+          <div class="metric">
+            <div class="metric-value">100+</div>
+            <div class="metric-label">Agents</div>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric">
+            <div class="metric-value">K8s</div>
+            <div class="metric-label">Scheduling</div>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric">
+            <div class="metric-value">5</div>
+            <div class="metric-label">Integrations</div>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric">
+            <div class="metric-value">382</div>
+            <div class="metric-label">Tests</div>
+          </div>
+        </div>
       </div>
-      <div class="hero-stat">
-        <span class="num">5</span>
-        <span class="label">Integration Methods</span>
+
+      <!-- 3-Layer Architecture Diagram -->
+      <div class="container section">
+        <div class="section-header">
+          <div class="text-label">How It Works</div>
+          <h2 class="text-section-heading">Three-layer architecture</h2>
+        </div>
+
+        <div style="max-width: 40rem;">
+          <!-- Layer 1 -->
+          <div class="card" style="margin-bottom: var(--space-2); border-color: var(--color-border);">
+            <div class="card-label">Layer 1 &mdash; Your Application</div>
+            <div class="card-title">Raw Agentic Loop</div>
+            <p class="card-description">The inner loop built into Claude Code. One agent, one task, sequential execution. No parallelism, no persistent state.</p>
+          </div>
+
+          <!-- Connector -->
+          <div style="display: flex; justify-content: center; padding: var(--space-1) 0;">
+            <div style="width: 1px; height: 20px; background-color: var(--color-border);"></div>
+          </div>
+
+          <!-- Layer 2 -->
+          <div class="card" style="margin-bottom: var(--space-2); border-color: var(--color-border);">
+            <div class="card-label">Layer 2 &mdash; Claude Code Subagents</div>
+            <div class="card-title">Parallel but Unmanaged</div>
+            <p class="card-description">Spawns background agents via the Agent tool. Multiple tasks run concurrently, but with zero resource awareness. No scheduling, no backpressure. Can OOM-kill the system.</p>
+          </div>
+
+          <!-- Connector -->
+          <div style="display: flex; justify-content: center; padding: var(--space-1) 0;">
+            <div style="width: 1px; height: 20px; background-color: var(--color-border);"></div>
+          </div>
+
+          <!-- Layer 3 -->
+          <div class="card" style="margin-bottom: 0; border-color: var(--color-accent);">
+            <div class="card-label" style="color: var(--color-accent);">Layer 3 &mdash; Centurion</div>
+            <div class="card-title">Managed Fleet Orchestration</div>
+            <p class="card-description">Hardware-aware scheduling, K8s-style admission control, DAG-based task decomposition, real-time event streaming, and auto-scaling. Safe, structured parallel execution at machine scale.</p>
+            <div class="card-metrics">
+              <div>
+                <div class="card-metric-label">Scheduler</div>
+                <div class="card-metric-value">K8s-style</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Broadcasting</div>
+                <div class="card-metric-value">all / legion / century</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Auto-scaling</div>
+                <div class="card-metric-value">Optio</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="hero-stat">
-        <span class="num">18</span>
-        <span class="label">MCP Tools</span>
+
+      <!-- Why Centurion -->
+      <div class="container section">
+        <div class="section-header">
+          <div class="text-label">The Problem</div>
+          <h2 class="text-section-heading">Why Centurion</h2>
+        </div>
+        <p class="text-body" style="margin-bottom: var(--space-6);">Claude Code has zero resource management. No RAM awareness, no parallel agent limits, no memory pressure detection. Spawning 20+ subagents on a constrained machine can OOM-kill the entire system. A community request for <code style="font-family: var(--font-mono); font-size: var(--text-sm);">maxParallelAgents</code> (<a href="https://github.com/anthropics/claude-code/issues/15487" class="inline-link" style="text-decoration: underline;">#15487</a>) was closed NOT_PLANNED &mdash; Anthropic views resource scheduling as outside their application boundary.</p>
+        <p class="text-body">Centurion fills this permanent gap. It operates at the infrastructure layer: probing hardware, enforcing admission control before every agent spawn, detecting memory pressure in real time, and scaling fleets automatically. It is model-independent &mdash; the same scheduler works for Claude, GPT, Gemini, or shell scripts.</p>
       </div>
+
     </div>
-  </div>
-</div>
+    <!-- TAB: OVERVIEW CONTENT END -->
 
-<!-- FEATURES -->
-<section id="features">
-  <h2 class="section-title">Why Centurion?</h2>
-  <p class="section-subtitle">Built for when 1-2 agents isn't enough.</p>
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">&#9876;</div>
-      <h3>Roman Military Hierarchy</h3>
-      <p>Organize agents into Legions, Centuries, and Legionaries. Intuitive fleet management at any scale with clear chain of command.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#9881;</div>
-      <h3>K8s-Inspired Scheduling</h3>
-      <p>Admission control, resource requests/limits, and hardware probing. The scheduler knows exactly how many agents your machine can handle.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#128266;</div>
-      <h3>Fleet Broadcasting</h3>
-      <p>Send real-time instructions to all agents, a specific legion, or a specific century. Change agent behavior on the fly.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#128200;</div>
-      <h3>Auto-Scaling (Optio)</h3>
-      <p>Each century has an Optio that monitors queue depth and scales agents up or down in real time. No manual intervention needed.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#9889;</div>
-      <h3>One-Click Quickstart</h3>
-      <p><code>centurion quickstart</code> &mdash; probes hardware, recommends config, creates a fleet, and starts the server. One command.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#128279;</div>
-      <h3>5 Integration Methods</h3>
-      <p>REST API, MCP Server, Claude Code Skill, Google A2A Protocol, and Python Library. Fits into any AI ecosystem.</p>
-    </div>
-  </div>
-</section>
+    <!-- TAB: CASE STUDIES CONTENT START -->
+    <div id="tab-case-studies" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-case-studies">
+      <div class="container">
 
-<!-- ARCHITECTURE -->
-<section>
-  <h2 class="section-title">Architecture</h2>
-  <p class="section-subtitle">Kubernetes meets the Roman Legion.</p>
-  <div class="arch-block">
-<pre>
-                       +-----------------------+
-                       |      CENTURION        |       REST API (/api/centurion/*)
-                       |    Control Plane      |----&gt; MCP Server (18 tools)
-                       +----------+------------+       A2A (/.well-known/agent.json)
-                                  |                    Claude Code Skill
-             +--------------------+--------------------+
-             |                    |                    |
-    +--------v--------+  +-------v--------+  +--------v--------+
-    |   Scheduler      |  |  Broadcaster   |  |   EventBus       |
-    | (K8s admission   |  | (all / legion  |  |  (Aquilifer)     |
-    |  control)        |  |  / century)    |  |  WebSocket pub-  |
-    +---------+--------+  +-------+--------+  |  sub stream      |
-              |                   |           +---------+--------+
-              +-------------------+                     |
-                       |                                |
-      +----------------+----------------+               |
-      |                                 |               |
-+-----v------+              +-----------v----+          |
-| Legion     |              | Legion         |          |
-| "alpha"    |              | "beta"         |          |
-+-----+------+              +------+---------+          |
-      |                            |                    |
-  +---+---+                   +----+----+               |
-  |       |                   |         |               |
-+-v--+ +--v-+              +--v--+ +---v--+             |
-|Cen | |Cen |              |Cen  | |Cen   |             |
-|cli | |api |              |shell| |api   |             |
-|x5  | |x3  |              |x10  | |x8    |             |
-+--+-+ +-+--+              +--+--+ +--+---+             |
-   |     |                    |        |                |
- LLLLL  LLL              LLLLLLLLLL LLLLLLLL  &lt;- events-+
- |||||  |||              ||||||||||  ||||||||
- Legionaries (individual agent instances)
-</pre>
-  </div>
-</section>
+        <!-- Section Header -->
+        <div class="section" style="padding-bottom: var(--space-8);">
+          <div class="section-header">
+            <p class="text-label">Case Studies</p>
+            <h2 class="text-heading">Real Projects, Verified Metrics</h2>
+            <p class="text-lead">Every number below comes from actual project history — task counts, test results, and commit logs.</p>
+          </div>
 
-<!-- SUCCESS STORY -->
-<section id="story">
-  <h2 class="section-title">Case Study</h2>
-  <p class="section-subtitle">Real-world parallel research at scale.</p>
-  <div class="story-card">
-    <div class="story-header">
-      <span class="story-badge">COMPLETED</span>
-      <h3 class="story-title">Researching Top 20 AI Agent Companies in Parallel</h3>
-    </div>
-    <p class="story-desc">
-      We deployed Centurion to research the top 20 AI agent companies simultaneously. Each legionary was assigned one company to analyze &mdash; covering product offerings, funding, team size, tech stack, and competitive positioning. What would take a single agent <strong>4+ hours</strong> sequentially was completed in <strong>12 minutes</strong> with 20 agents running in parallel.
-    </p>
+          <!-- Case Study Pills Navigation -->
+          <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-4);">
+            <button class="cs-pill active" data-cs="cs-1">Ecosystem Docs</button>
+            <button class="cs-pill" data-cs="cs-2">Zeroclaw OSS</button>
+            <button class="cs-pill" data-cs="cs-3">20-Agent Research</button>
+            <button class="cs-pill" data-cs="cs-4">Harness Loop POC</button>
+            <button class="cs-pill" data-cs="cs-5">Auspex Self-Evolution</button>
+          </div>
+        </div>
 
-    <div class="story-metrics">
-      <div class="metric-card">
-        <span class="val gold">20</span>
-        <span class="desc">Parallel Agents</span>
-      </div>
-      <div class="metric-card">
-        <span class="val green">12 min</span>
-        <span class="desc">Total Wall Time</span>
-      </div>
-      <div class="metric-card">
-        <span class="val blue">~1.2M</span>
-        <span class="desc">Tokens Consumed</span>
-      </div>
-      <div class="metric-card">
-        <span class="val purple">20x</span>
-        <span class="desc">Speedup vs Single</span>
-      </div>
-      <div class="metric-card">
-        <span class="val red">$2.40</span>
-        <span class="desc">Total API Cost</span>
-      </div>
-    </div>
+        <!-- ===== Case Study 1: Ecosystem Docs & Strategy ===== -->
+        <div class="cs-panel active" id="cs-1" style="padding-bottom: var(--space-24);">
+          <div class="card" style="margin-bottom: var(--space-6);">
+            <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
+              <span class="card-label" style="margin-bottom: 0;">Case Study 01</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">17 tasks</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">~45 min</span>
+            </div>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">Ecosystem Docs &amp; Strategy</h3>
+            <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
+              Full documentation overhaul, website redesign, and go-to-market strategy executed in a single harness loop run. Harness Loop planned and executed 17 tasks that rewrote documentation across the entire ecosystem, generated a marketing strategy, and delivered a final PDF report via email.
+            </p>
+            <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
+              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">6</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">batch chains executed across 4 repos updated simultaneously</span>
+            </div>
+            <div class="card-metrics">
+              <div>
+                <div class="card-metric-label">Architecture</div>
+                <div class="card-metric-value">4 tasks</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Engineering</div>
+                <div class="card-metric-value">11 tasks</div>
+              </div>
+              <div>
+                <div class="card-metric-label">QA</div>
+                <div class="card-metric-value">2 tasks</div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="border-left: 2px solid var(--color-accent);">
+            <p class="card-label">What Centurion Did</p>
+            <p class="card-description" style="line-height: var(--leading-normal);">
+              Organized 17 tasks into 3 phases (architecture, engineering, QA) and executed them in 6 sequential batch chains, parallelizing independent tasks within each batch. Progress was streamed to Telegram in real-time with visual progress bars. Updated the Centurion website, refreshed READMEs across 4 repos, and renamed mac-bootstrap to Auspex with all cross-references updated.
+            </p>
+          </div>
+        </div>
 
-    <h4 style="margin-bottom: 1rem; color: var(--gold);">Mission Timeline</h4>
-    <div class="story-timeline">
-      <div class="timeline-item">
-        <div class="time">T+0s</div>
-        <div class="event">Centurion quickstart &mdash; hardware probed, 20 claude_cli agents recommended</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">T+3s</div>
-        <div class="event">Legion "research-ops" raised, Century mustered with 20 legionaries</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">T+5s</div>
-        <div class="event">Batch of 20 research tasks submitted &mdash; one company per agent</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">T+15s</div>
-        <div class="event">All 20 agents active and executing in parallel</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">T+6min</div>
-        <div class="event">Broadcast sent: "Include funding round details and key investors"</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">T+8min</div>
-        <div class="event">First 5 agents complete, Optio scales down to 15 agents</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">T+12min</div>
-        <div class="event">All 20 reports collected. 0 failures. Fleet disbanded.</div>
-      </div>
-    </div>
+        <!-- ===== Case Study 2: Zeroclaw OSS Contribution ===== -->
+        <div class="cs-panel" id="cs-2" style="display: none; padding-bottom: var(--space-24);">
+          <div class="card" style="margin-bottom: var(--space-6);">
+            <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
+              <span class="card-label" style="margin-bottom: 0;">Case Study 02</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">5 tasks</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">~25 min</span>
+            </div>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">Zeroclaw OSS Contribution</h3>
+            <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
+              First open-source PR to a Rust project, from issue discovery to CI-validated pull request. Harness Loop autonomously researched the repository, identified issue #3486, forked the repo, applied the fix, and validated with the full cargo test suite before submitting PR #3519.
+            </p>
+            <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
+              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">7,169</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">Rust tests passed locally before PR submission</span>
+            </div>
+            <div class="card-metrics">
+              <div>
+                <div class="card-metric-label">Architecture</div>
+                <div class="card-metric-value">1 task</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Engineering</div>
+                <div class="card-metric-value">2 tasks</div>
+              </div>
+              <div>
+                <div class="card-metric-label">QA</div>
+                <div class="card-metric-value">2 tasks</div>
+              </div>
+              <div>
+                <div class="card-metric-label">PR</div>
+                <div class="card-metric-value">#3519</div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="border-left: 2px solid var(--color-accent);">
+            <p class="card-label">What Centurion Did</p>
+            <p class="card-description" style="line-height: var(--leading-normal);">
+              Structured the contribution workflow into 5 tasks across 3 phases: research contribution rules and find the right issue (architecture), fork/clone and apply the fix (engineering), then run full validation and create the PR (QA). Each phase gated the next, ensuring no PR was submitted without passing all 7,169 tests. Used git worktree to avoid impacting the locally running instance.
+            </p>
+          </div>
+        </div>
 
-    <div class="code-block" style="margin-top: 2rem;">
-      <code>
-<span class="code-comment"># The entire operation in 5 commands</span>
-<span class="code-cmd">centurion quickstart</span> <span class="code-flag">--agent-type</span> <span class="code-str">claude_cli</span>
+        <!-- ===== Case Study 3: 20-Agent Parallel Research ===== -->
+        <div class="cs-panel" id="cs-3" style="display: none; padding-bottom: var(--space-24);">
+          <div class="card" style="margin-bottom: var(--space-6);">
+            <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
+              <span class="card-label" style="margin-bottom: 0;">Case Study 03</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">20+ agents</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">Single run</span>
+            </div>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">20-Agent Parallel Research</h3>
+            <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
+              Centurion fleet deployment coordinating 20+ simultaneous Claude agents for market research on a single Mac Mini. The hardware-aware scheduler probed CPU and RAM, calculated the safe agent limit, and spawned agents up to capacity with each receiving a distinct research prompt.
+            </p>
+            <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
+              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">20+</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">agents running simultaneously on a single Mac Mini</span>
+            </div>
+            <div class="card-metrics">
+              <div>
+                <div class="card-metric-label">Scheduling</div>
+                <div class="card-metric-value">K8s-inspired</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Autoscaler</div>
+                <div class="card-metric-value">10s interval</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Events</div>
+                <div class="card-metric-value">WebSocket</div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="border-left: 2px solid var(--color-accent);">
+            <p class="card-label">What Centurion Did</p>
+            <p class="card-description" style="line-height: var(--leading-normal);">
+              Centurion's K8s-inspired resource scheduler handled admission control for all 20+ agents, preventing resource exhaustion. The Optio autoscaler monitored queue depth every 10 seconds and scaled agents up/down as tasks completed. The EventBus (Aquilifer) streamed real-time events via WebSocket. Demonstrated the ability to safely saturate hardware resources without OOM kills or process starvation.
+            </p>
+          </div>
+        </div>
 
-<span class="code-cmd">curl</span> <span class="code-flag">-X POST</span> localhost:8100/api/centurion/legions <span class="code-flag">\</span>
-  <span class="code-flag">-d</span> <span class="code-str">'{"name": "Research Ops"}'</span>
+        <!-- ===== Case Study 4: Harness Loop POC ===== -->
+        <div class="cs-panel" id="cs-4" style="display: none; padding-bottom: var(--space-24);">
+          <div class="card" style="margin-bottom: var(--space-6);">
+            <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
+              <span class="card-label" style="margin-bottom: 0;">Case Study 04</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">17 tasks</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">Multi-day</span>
+            </div>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">Harness Loop POC</h3>
+            <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
+              Building the orchestration engine itself, from concept to passing tests. The Centurion engine was designed and built from scratch as a standalone Python project with Legions, Centuries, and Legionaries -- implementing three agent types, three running modes, full REST API, and WebSocket event streaming.
+            </p>
+            <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
+              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">298</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">tests passing across 2,770+ lines of code</span>
+            </div>
+            <div class="card-metrics">
+              <div>
+                <div class="card-metric-label">Agent Types</div>
+                <div class="card-metric-value">3</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Run Modes</div>
+                <div class="card-metric-value">3</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Build Phases</div>
+                <div class="card-metric-value">6</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Files</div>
+                <div class="card-metric-value">20+</div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="border-left: 2px solid var(--color-accent);">
+            <p class="card-label">What Centurion Did</p>
+            <p class="card-description" style="line-height: var(--leading-normal);">
+              Harness Loop structured the build into 6 phases: Core Engine, Agent Types + Hardware, Persistence + Events, API + WebSocket, MCP Integration, and Repo Setup. Tasks were organized in a DAG with dependency tracking, and progress was reported via Telegram at phase boundaries. The project completed with 298 tests passing and was deployed as a public GitHub repo with MIT license.
+            </p>
+          </div>
+        </div>
 
-<span class="code-cmd">curl</span> <span class="code-flag">-X POST</span> localhost:8100/api/centurion/legions/default/centuries <span class="code-flag">\</span>
-  <span class="code-flag">-d</span> <span class="code-str">'{"agent_type": "claude_cli", "min_legionaries": 20, "max_legionaries": 20}'</span>
+        <!-- ===== Case Study 5: Auspex Self-Evolution ===== -->
+        <div class="cs-panel" id="cs-5" style="display: none; padding-bottom: var(--space-24);">
+          <div class="card" style="margin-bottom: var(--space-6);">
+            <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
+              <span class="card-label" style="margin-bottom: 0;">Case Study 05</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">10 files</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">Single session</span>
+            </div>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">Auspex Self-Evolution</h3>
+            <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
+              A bootstrap repo that renamed itself, rewired all cross-references, and adopted a Roman identity. The mac-bootstrap project deploys the entire AI agent stack onto any fresh Mac with a single command, then renamed itself to "Auspex" with zero-downtime coordination across local and remote repos.
+            </p>
+            <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
+              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">4</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">services orchestrated with zero-downtime rename across all repos</span>
+            </div>
+            <div class="card-metrics">
+              <div>
+                <div class="card-metric-label">Services</div>
+                <div class="card-metric-value">4</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Scripts</div>
+                <div class="card-metric-value">10 files</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Target</div>
+                <div class="card-metric-value">Apple Silicon</div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="border-left: 2px solid var(--color-accent);">
+            <p class="card-label">What Centurion Did</p>
+            <p class="card-description" style="line-height: var(--leading-normal);">
+              The initial build was structured as a harness loop project with architecture (requirements analysis, service dependency mapping), engineering (script writing for all 10 files), and QA (health-check validation on the live machine). The rename phase demonstrated the system's ability to coordinate cross-repo changes -- updating references in Centurion's README, the Auspex repo itself, and ecosystem documentation simultaneously. One-command deployment of a 4-service AI agent stack on any Apple Silicon Mac.
+            </p>
+          </div>
+        </div>
 
-<span class="code-cmd">curl</span> <span class="code-flag">-X POST</span> localhost:8100/api/centurion/legions/default/tasks <span class="code-flag">\</span>
-  <span class="code-flag">-d</span> <span class="code-str">'{"prompts": ["Research OpenAI", "Research Anthropic", "Research Google DeepMind", ...]}'</span>
-
-<span class="code-cmd">curl</span> <span class="code-flag">-X POST</span> localhost:8100/api/centurion/broadcast <span class="code-flag">\</span>
-  <span class="code-flag">-d</span> <span class="code-str">'{"message": "Include funding details", "target": "all"}'</span>
-      </code>
-    </div>
-  </div>
-</section>
-
-<!-- COMPARISON -->
-<section id="comparison">
-  <h2 class="section-title">How Centurion Compares</h2>
-  <p class="section-subtitle">Built for scale. Not limited to role-playing 2-3 agents.</p>
-  <div style="overflow-x: auto;">
-    <table class="comparison-table">
-      <thead>
-        <tr>
-          <th>Feature</th>
-          <th>CrewAI</th>
-          <th>AutoGen</th>
-          <th>LangGraph</th>
-          <th class="highlight-col-header">Centurion</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="feature">Max practical agents</td>
-          <td>2-5</td>
-          <td>2-10</td>
-          <td>2-5</td>
-          <td class="highlight-col"><strong>100+</strong></td>
-        </tr>
-        <tr>
-          <td class="feature">Hardware-aware scheduling</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-        <tr>
-          <td class="feature">Auto-scaling</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-        <tr>
-          <td class="feature">K8s-style admission control</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-        <tr>
-          <td class="feature">Real-time event streaming</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-        <tr>
-          <td class="feature">Fleet broadcasting</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-        <tr>
-          <td class="feature">Claude Code native</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-        <tr>
-          <td class="feature">OpenClaw compatible</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-        <tr>
-          <td class="feature">MCP server</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span> (18 tools)</td>
-        </tr>
-        <tr>
-          <td class="feature">A2A protocol (Google)</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-        <tr>
-          <td class="feature">REST API</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td>partial</td>
-          <td class="highlight-col"><span class="check">&#10003;</span> (21 endpoints)</td>
-        </tr>
-        <tr>
-          <td class="feature">Circuit breaker</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-        <tr>
-          <td class="feature">Priority task queuing</td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td><span class="cross">&#10007;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-        <tr>
-          <td class="feature">Python library mode</td>
-          <td><span class="check">&#10003;</span></td>
-          <td><span class="check">&#10003;</span></td>
-          <td><span class="check">&#10003;</span></td>
-          <td class="highlight-col"><span class="check">&#10003;</span></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</section>
-
-<!-- INTEGRATIONS -->
-<section id="integrations">
-  <h2 class="section-title">Five Ways to Connect</h2>
-  <p class="section-subtitle">Centurion fits into your existing AI stack.</p>
-  <div class="integration-row">
-    <div class="int-badge"><span class="int-dot green"></span> REST API (21 endpoints)</div>
-    <div class="int-badge"><span class="int-dot purple"></span> MCP Server (18 tools)</div>
-    <div class="int-badge"><span class="int-dot blue"></span> Claude Code Skill</div>
-    <div class="int-badge"><span class="int-dot gold"></span> A2A Protocol (Google)</div>
-    <div class="int-badge"><span class="int-dot red"></span> Python Library</div>
-  </div>
-
-  <div class="code-block">
-    <code>
-<span class="code-comment"># 1. REST API</span>
-<span class="code-cmd">centurion quickstart</span>
-<span class="code-cmd">curl</span> http://localhost:8100/api/centurion/status
-
-<span class="code-comment"># 2. MCP Server (Claude Code / Claude Desktop)</span>
-<span class="code-cmd">claude mcp add</span> centurion <span class="code-flag">--</span> python <span class="code-flag">-m</span> centurion.mcp
-
-<span class="code-comment"># 3. Claude Code Skill</span>
-<span class="code-cmd">python -m</span> centurion.skill <span class="code-flag">&gt;</span> ~/.claude/skills/centurion.toml
-
-<span class="code-comment"># 4. A2A Protocol (Agent-to-Agent discovery)</span>
-<span class="code-cmd">curl</span> http://localhost:8100/.well-known/agent.json
-
-<span class="code-comment"># 5. Python Library (no HTTP needed)</span>
-<span class="code-str">from centurion import Centurion</span>
-<span class="code-str">engine = Centurion()</span>
-    </code>
-  </div>
-</section>
-
-<!-- WHY CENTURION -->
-<section id="why">
-  <h2 class="section-title">Why Centurion?</h2>
-  <p class="section-subtitle">Claude Code has zero resource management. Centurion fills the gap Anthropic won't.</p>
-
-  <div class="story-card" style="margin-bottom: 2rem;">
-    <div class="story-header">
-      <span class="story-badge" style="background: rgba(192,57,43,0.15); color: var(--red-bright);">EVIDENCE</span>
-      <h3 class="story-title">Claude Code's Documented Resource Problems</h3>
-    </div>
-    <p class="story-desc">
-      Claude Code has no aggregate memory cap, no spawn throttle, and no resource awareness. These aren't edge cases &mdash; they're
-      well-documented issues with dozens of upvotes from real users experiencing OOM kills, system lockups, and 120GB+ memory leaks.
-    </p>
-    <div class="story-metrics">
-      <div class="metric-card">
-        <span class="val red">120 GB</span>
-        <span class="desc">Peak memory leak (<a href="https://github.com/anthropics/claude-code/issues/4953">#4953</a>)</span>
-      </div>
-      <div class="metric-card">
-        <span class="val red">93 GB</span>
-        <span class="desc">Heap in 5 min (<a href="https://github.com/anthropics/claude-code/issues/22188">#22188</a>)</span>
-      </div>
-      <div class="metric-card">
-        <span class="val red">24</span>
-        <span class="desc">Agents in 2 min, total lockup (<a href="https://github.com/anthropics/claude-code/issues/15487">#15487</a>)</span>
-      </div>
-      <div class="metric-card">
-        <span class="val gold">NOT_PLANNED</span>
-        <span class="desc"><a href="https://github.com/anthropics/claude-code/issues/15487">#15487</a> closed by Anthropic</span>
       </div>
     </div>
+    <!-- TAB: CASE STUDIES CONTENT END -->
 
-    <h4 style="margin-bottom: 1rem; color: var(--gold);">GitHub Issue Evidence</h4>
-    <div class="story-timeline">
-      <div class="timeline-item">
-        <div class="time"><a href="https://github.com/anthropics/claude-code/issues/4953">#4953</a> &mdash; OPEN &middot; 62 upvotes</div>
-        <div class="event">Memory Leak: process grows to 120+ GB RAM, OOM killed on 128GB system within 30-60 min</div>
+    <!-- TAB: QUICK START CONTENT START -->
+    <div id="tab-quick-start" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-quick-start">
+
+      <!-- Quick Start: 3-Step Install Guide -->
+      <div class="container">
+        <div class="section">
+          <div class="section-header">
+            <div class="text-label">Quick Start</div>
+            <h2 class="text-section-heading">Up and running in three steps</h2>
+            <p class="text-lead" style="margin-top: var(--space-4);">From zero to orchestrating AI agents in under a minute.</p>
+          </div>
+
+          <div class="steps">
+
+            <!-- Step 1: Install -->
+            <div class="step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h3 class="step-title">Install</h3>
+                <div class="code-block" style="margin-bottom: var(--space-3);">
+                  <code><span style="color: var(--color-text-muted);">$</span> <span style="color: var(--color-accent);">pip install</span> centurion</code>
+                </div>
+                <p class="step-description">Includes Harness Loop skill for project orchestration.</p>
+              </div>
+            </div>
+
+            <!-- Step 2: Launch -->
+            <div class="step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h3 class="step-title">Launch</h3>
+                <div class="code-block" style="margin-bottom: var(--space-3);">
+                  <code><span style="color: var(--color-text-muted);">$</span> <span style="color: var(--color-accent);">centurion quickstart</span></code>
+                </div>
+                <p class="step-description" style="margin-bottom: var(--space-4);">Centurion detects your hardware and configures itself automatically.</p>
+                <div class="code-block">
+                  <code><span style="color: var(--color-text-muted);">HARDWARE SUMMARY</span>
+  Platform: Darwin | CPU: 10 cores | RAM: 32 GB
+
+<span style="color: var(--color-text-muted);">RECOMMENDED CONFIGURATION</span>
+  Agent type: claude_cli | Max agents: 20
+
+<span style="color: var(--color-success);">Centurion is ONLINE [quickstart mode]</span>
+<span style="color: var(--color-success);">Harness Loop: installed &#10003;</span></code>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3: Use -->
+            <div class="step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h3 class="step-title">Use</h3>
+                <div class="code-block">
+                  <code><span style="color: var(--color-text-muted);"># In Claude Code, type:</span>
+<span style="color: var(--color-accent);">/harness-loop</span>
+
+<span style="color: var(--color-text-muted);"># Or via REST API:</span>
+<span style="color: var(--color-accent);">curl</span> http://localhost:8100/api/centurion/status</code>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
-      <div class="timeline-item">
-        <div class="time"><a href="https://github.com/anthropics/claude-code/issues/22042">#22042</a> &mdash; CLOSED &middot; 92 upvotes</div>
-        <div class="event">Critical memory regression: typing "Test" causes 467MB to 7.5GB in 20 seconds</div>
+
+      <!-- Learn More -->
+      <div class="container">
+        <div class="section">
+          <div class="section-header">
+            <div class="text-label">Learn More</div>
+            <h2 class="text-section-heading">Explore the ecosystem</h2>
+          </div>
+
+          <div class="card-grid">
+
+            <a href="https://github.com/spacelobster88/centurion" class="card" style="text-decoration: none;">
+              <div class="card-label">Repository</div>
+              <div class="card-title">Centurion</div>
+              <div class="card-description">Resource-aware orchestration gateway. Source code, issues, and full documentation.</div>
+              <div style="margin-top: var(--space-4);">
+                <span class="btn-secondary">View on GitHub &rarr;</span>
+              </div>
+            </a>
+
+            <a href="https://github.com/spacelobster88/harness-loop" class="card" style="text-decoration: none;">
+              <div class="card-label">Skill</div>
+              <div class="card-title">Harness Loop</div>
+              <div class="card-description">Claude Code skill for structured project orchestration with planning, execution, and review phases.</div>
+              <div style="margin-top: var(--space-4);">
+                <span class="btn-secondary">View on GitHub &rarr;</span>
+              </div>
+            </a>
+
+            <a href="https://github.com/spacelobster88/auspex" class="card" style="text-decoration: none;">
+              <div class="card-label">Full Stack</div>
+              <div class="card-title">Auspex</div>
+              <div class="card-description">The complete AI operations stack. Centurion + Harness Loop + monitoring, bundled and ready to deploy.</div>
+              <div style="margin-top: var(--space-4);">
+                <span class="btn-secondary">View on GitHub &rarr;</span>
+              </div>
+            </a>
+
+          </div>
+        </div>
       </div>
-      <div class="timeline-item">
-        <div class="time"><a href="https://github.com/anthropics/claude-code/issues/25926">#25926</a> &mdash; OPEN</div>
-        <div class="event">JavaScript heap OOM: mutableMessages array grows unbounded, V8 heap hits 4.1GB after ~2.5 hours</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time"><a href="https://github.com/anthropics/claude-code/issues/21403">#21403</a> &mdash; OPEN</div>
-        <div class="event">Memory leak causing OOM kill at 15-17GB on 32GB system with parallel subagents</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time"><a href="https://github.com/anthropics/claude-code/issues/15487">#15487</a> &mdash; CLOSED (NOT_PLANNED)</div>
-        <div class="event">Request for maxParallelAgents setting &mdash; 24 agents spawned in 2 min on 4GB VPS, 17x disk I/O spike, complete lockup. <strong>Anthropic closed this as NOT_PLANNED.</strong></div>
+
+    </div>
+    <!-- TAB: QUICK START CONTENT END -->
+
+    <!-- TAB: COMPARISON CONTENT START -->
+    <div id="tab-comparison" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-comparison">
+      <div class="container">
+
+        <!-- Section 1: Header -->
+        <section class="section">
+          <div class="section-header">
+            <p class="text-label">Comparison</p>
+            <h2 class="text-heading">How Centurion Compares</h2>
+            <p class="text-lead">Claude Code ships without infrastructure-level process management. Centurion fills that gap.</p>
+          </div>
+
+          <!-- Feature Comparison Table -->
+          <div class="table-wrapper">
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Raw Agentic Loop</th>
+                  <th>Claude Code Subagents</th>
+                  <th class="col-highlight">Centurion</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Parallel agents</td>
+                  <td>1</td>
+                  <td>Unlimited (unmanaged)</td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">100+ (managed)</span></td>
+                </tr>
+                <tr>
+                  <td>Memory awareness</td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; None</span></td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; None</span></td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; RAM/CPU probing</span></td>
+                </tr>
+                <tr>
+                  <td>Scheduling</td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; None</span></td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; None</span></td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; K8s-style admission</span></td>
+                </tr>
+                <tr>
+                  <td>Memory safety</td>
+                  <td><span style="color: var(--color-text-muted);">N/A</span></td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; OOM risk</span></td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; Pressure detection</span></td>
+                </tr>
+                <tr>
+                  <td>Task decomposition</td>
+                  <td><span style="color: var(--color-text-muted);">Manual</span></td>
+                  <td><span style="color: var(--color-text-muted);">Manual</span></td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; Automatic DAG</span></td>
+                </tr>
+                <tr>
+                  <td>State persistence</td>
+                  <td><span style="color: var(--color-text-muted);">In-memory</span></td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; None</span></td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; .harness/ + SQLite</span></td>
+                </tr>
+                <tr>
+                  <td>Cross-project</td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; No</span></td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; No</span></td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; Yes</span></td>
+                </tr>
+                <tr>
+                  <td>Auto-scaling</td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; No</span></td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; No</span></td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; Yes (Optio)</span></td>
+                </tr>
+                <tr>
+                  <td>Broadcasting</td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; No</span></td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; No</span></td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; Yes</span></td>
+                </tr>
+                <tr>
+                  <td>Circuit breaker</td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; No</span></td>
+                  <td><span style="color: var(--color-text-muted);">&#10007; No</span></td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; Yes</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Section 2: Evidence -->
+        <section class="section">
+          <div class="section-header">
+            <p class="text-label">Evidence</p>
+            <h2 class="text-section-heading">Don't take our word for it</h2>
+            <p class="text-body text-muted">These are open GitHub issues and discussions filed by users running Claude Code at scale. The memory management gap is well-documented.</p>
+          </div>
+
+          <div class="card-grid" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="card">
+              <p class="card-label">Issue #4953</p>
+              <p class="card-title">Memory leak &mdash; process grows to 120+ GB</p>
+              <p class="card-description">Long-running Claude Code sessions accumulate memory without bound, eventually consuming all available RAM on the host machine.</p>
+              <div style="margin-top: var(--space-4);">
+                <a href="https://github.com/anthropics/claude-code/issues/4953" class="inline-link" style="font-size: var(--text-sm); color: var(--color-accent);">View on GitHub &rarr;</a>
+              </div>
+            </div>
+
+            <div class="card">
+              <p class="card-label">Issue #15487</p>
+              <p class="card-title">maxParallelAgents &mdash; closed NOT_PLANNED</p>
+              <p class="card-description">A request for configurable parallel agent limits was closed as NOT_PLANNED, confirming this is outside Anthropic's intended scope for Claude Code.</p>
+              <div style="margin-top: var(--space-4);">
+                <a href="https://github.com/anthropics/claude-code/issues/15487" class="inline-link" style="font-size: var(--text-sm); color: var(--color-accent);">View on GitHub &rarr;</a>
+              </div>
+            </div>
+
+            <div class="card">
+              <p class="card-label">Issue #22188</p>
+              <p class="card-title">93 GB heap crash</p>
+              <p class="card-description">A single Claude Code session crashed after its heap grew to 93 GB, taking down co-located processes and requiring a hard restart.</p>
+              <div style="margin-top: var(--space-4);">
+                <a href="https://github.com/anthropics/claude-code/issues/22188" class="inline-link" style="font-size: var(--text-sm); color: var(--color-accent);">View on GitHub &rarr;</a>
+              </div>
+            </div>
+
+            <div class="card">
+              <p class="card-label">Issue #21403</p>
+              <p class="card-title">16 GB RSS on Linux</p>
+              <p class="card-description">On Linux workstations, a single agent session reaches 16 GB RSS, making multi-agent workflows impractical without external resource management.</p>
+              <div style="margin-top: var(--space-4);">
+                <a href="https://github.com/anthropics/claude-code/issues/21403" class="inline-link" style="font-size: var(--text-sm); color: var(--color-accent);">View on GitHub &rarr;</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 3: Summary -->
+        <section class="section">
+          <div class="section-header">
+            <p class="text-label">Position</p>
+            <h2 class="text-section-heading">Infrastructure, not intelligence</h2>
+          </div>
+          <p class="text-body">Centurion operates at the infrastructure level. It does not modify prompts, intercept API calls, or depend on any specific model provider. When Anthropic closed <a href="https://github.com/anthropics/claude-code/issues/15487" class="inline-link" style="color: var(--color-accent);">#15487</a> as NOT_PLANNED, it drew a clear boundary: Claude Code is a single-agent tool, and resource orchestration is out of scope. Centurion exists on the other side of that boundary &mdash; managing processes, memory, scheduling, and state so that any agentic coding tool can run reliably at scale.</p>
+        </section>
+
       </div>
     </div>
-  </div>
+    <!-- TAB: COMPARISON CONTENT END -->
 
-  <h4 style="margin-bottom: 1rem; color: var(--gold); font-size: 1.2rem;">Claude Code vs Centurion</h4>
-  <div style="overflow-x: auto;">
-    <table class="comparison-table">
-      <thead>
-        <tr>
-          <th>Feature</th>
-          <th>Claude Code</th>
-          <th class="highlight-col-header">Centurion</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="feature">Memory pressure monitoring</td>
-          <td><span class="cross">&#10007;</span> None &mdash; no awareness of system RAM</td>
-          <td class="highlight-col"><span class="check">&#10003;</span> 3-level detection (Normal / Warn / Critical)</td>
-        </tr>
-        <tr>
-          <td class="feature">RAM/CPU-aware scheduling</td>
-          <td><span class="cross">&#10007;</span> No hardware probing at all</td>
-          <td class="highlight-col"><span class="check">&#10003;</span> Probes CPU, RAM, load averages before every spawn</td>
-        </tr>
-        <tr>
-          <td class="feature">Parallel agent limits</td>
-          <td><span class="cross">&#10007;</span> <a href="https://github.com/anthropics/claude-code/issues/15487">#15487 closed NOT_PLANNED</a></td>
-          <td class="highlight-col"><span class="check">&#10003;</span> K8s-style admission control with configurable limits</td>
-        </tr>
-        <tr>
-          <td class="feature">Cross-session coordination</td>
-          <td><span class="cross">&#10007;</span> Each session is isolated</td>
-          <td class="highlight-col"><span class="check">&#10003;</span> Centralized scheduler tracks all agent processes</td>
-        </tr>
-        <tr>
-          <td class="feature">Memory leak detection</td>
-          <td><span class="cross">&#10007;</span> <a href="https://github.com/anthropics/claude-code/issues/4953">120GB leak documented</a></td>
-          <td class="highlight-col"><span class="check">&#10003;</span> RSS audit warns when actual exceeds 1.5x allocated</td>
-        </tr>
-        <tr>
-          <td class="feature">Circuit breaker</td>
-          <td><span class="cross">&#10007;</span> Failed spawns don't trigger backoff</td>
-          <td class="highlight-col"><span class="check">&#10003;</span> 3-state breaker (Closed / Open / Half-Open)</td>
-        </tr>
-        <tr>
-          <td class="feature">Auto-scaling with backpressure</td>
-          <td><span class="cross">&#10007;</span> No scaling concept</td>
-          <td class="highlight-col"><span class="check">&#10003;</span> Optio monitors queue depth and adjusts fleet size</td>
-        </tr>
-        <tr>
-          <td class="feature">OS-level pressure signals</td>
-          <td><span class="cross">&#10007;</span> Node.js process, no OS integration</td>
-          <td class="highlight-col"><span class="check">&#10003;</span> Reads macOS kern.memorystatus_level, Linux PSI</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  </main>
 
-  <p style="color: var(--text-dim); margin-top: 1.5rem; font-size: 0.95rem;">
-    Centurion operates at the <strong>OS/infrastructure layer</strong> &mdash; reading vm_stat, sysctl, load averages, and process RSS.
-    This is fundamentally outside Anthropic's scope. They build AI models and developer tools; resource scheduling is systems infrastructure that varies per machine, per deployment, and per workload.
-    <strong>No competing tool provides resource-aware scheduling for AI agents.</strong>
-  </p>
-</section>
-
-<!-- BEST SCENARIO: HARNESS LOOP -->
-<section id="harness">
-  <h2 class="section-title">Best Scenario: Harness Loop</h2>
-  <p class="section-subtitle">Running 20+ parallel research and engineering tasks, safely managed by Centurion.</p>
-
-  <div class="story-card">
-    <div class="story-header">
-      <span class="story-badge">IDEAL USE CASE</span>
-      <h3 class="story-title">Parallel Task Execution with Automatic Backpressure</h3>
+  <!-- ============================================
+       FOOTER
+       ============================================ -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="https://github.com/spacelobster88/centurion/blob/main/LICENSE" class="inline-link">MIT License</a>
+        <span class="footer-separator">&middot;</span>
+        <a href="https://github.com/spacelobster88/centurion" class="inline-link">GitHub</a>
+        <span class="footer-separator">&middot;</span>
+        <a href="https://github.com/spacelobster88/centurion#readme" class="inline-link">Documentation</a>
+      </div>
+      <p class="footer-copyright">Copyright &copy; 2024 Centurion Contributors</p>
+      <p class="footer-disclaimer">This software is provided as-is, without warranty of any kind.</p>
     </div>
-    <p class="story-desc">
-      <a href="https://github.com/spacelobster88/harness-loop">Harness-loop</a> is a Claude Code skill that decomposes projects into a task DAG and executes independent tasks in parallel via subagents.
-      A typical engineering phase might dispatch 10-20 independent tasks &mdash; implement endpoint A, write tests for B, create migration C &mdash;
-      each consuming 250-500MB RAM plus CPU. On a 32GB machine, naively spawning 20 agents means 5-10GB RAM, context switching overhead, and I/O saturation.
-    </p>
+  </footer>
 
-    <div class="features-grid" style="margin-bottom: 2rem;">
-      <div class="feature-card" style="border-color: var(--red);">
-        <div class="feature-icon">&#9888;</div>
-        <h3 style="color: var(--red-bright);">Without Centurion</h3>
-        <p>Harness-loop guesses a safe concurrency number or uses a hardcoded limit. If one agent's Claude Code process leaks memory (<a href="https://github.com/anthropics/claude-code/issues/4953">#4953</a>), nothing detects the rising pressure. Result: OOM kills, system lockups, lost work.</p>
-      </div>
-      <div class="feature-card" style="border-color: var(--green);">
-        <div class="feature-icon">&#9989;</div>
-        <h3 style="color: var(--green);">With Centurion</h3>
-        <p>Before each batch, harness-loop queries <code>recommended_max_agents()</code> and <code>can_schedule()</code>. Centurion adapts in real-time to actual system conditions. If memory pressure rises mid-batch, spawning halts automatically. Progressive ramp-up confirms stability before scaling further.</p>
-      </div>
-    </div>
+  <!-- ============================================
+       JAVASCRIPT: TAB SWITCHING
+       ============================================ -->
+  <script>
+    (function () {
+      'use strict';
 
-    <h4 style="margin-bottom: 1rem; color: var(--gold);">How It Works</h4>
-    <div class="story-timeline">
-      <div class="timeline-item">
-        <div class="time">Step 1</div>
-        <div class="event">User describes a project: "Build a REST API with auth, database, and tests"</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">Step 2</div>
-        <div class="event">Harness-loop decomposes into phases: requirements, architecture, engineering, QA</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">Step 3</div>
-        <div class="event">Independent tasks within each phase are identified for parallel dispatch</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">Step 4</div>
-        <div class="event">Centurion's scheduler determines safe concurrency: <code>recommended_max_agents()</code> returns 8 on this machine</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">Step 5</div>
-        <div class="event">First batch of 8 agents dispatched. Centurion monitors RAM, CPU, and process RSS in real-time</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">Step 6</div>
-        <div class="event">Memory pressure rises to WARN &mdash; Centurion increases headroom, slows spawning. No new agents until pressure drops</div>
-      </div>
-      <div class="timeline-item">
-        <div class="time">Step 7</div>
-        <div class="event">Agents complete, pressure drops to NORMAL. Next batch dispatched. All tasks finish with zero OOM kills</div>
-      </div>
-    </div>
+      var tabButtons = document.querySelectorAll('.tab-btn');
+      var tabPanels = document.querySelectorAll('.tab-content');
 
-    <div class="code-block" style="margin-top: 2rem;">
-      <code>
-<span class="code-comment"># Harness-loop integration with Centurion</span>
-<span class="code-str">from centurion import Centurion</span>
+      function switchTab(targetId) {
+        tabButtons.forEach(function (btn) {
+          btn.classList.remove('active');
+          btn.setAttribute('aria-selected', 'false');
+        });
 
-<span class="code-str">engine = Centurion()</span>
-<span class="code-str">max_agents = engine.scheduler.recommended_max_agents()</span>
+        tabPanels.forEach(function (panel) {
+          panel.classList.remove('active');
+        });
 
-<span class="code-comment"># Before each spawn, check admission</span>
-<span class="code-str">if engine.scheduler.can_schedule(agent_type="claude_cli"):</span>
-<span class="code-str">    engine.dispatch_task(task)</span>
-<span class="code-str">else:</span>
-<span class="code-str">    # Backpressure: wait for resources to free up</span>
-<span class="code-str">    engine.wait_for_capacity()</span>
-      </code>
-    </div>
-  </div>
-</section>
+        var targetBtn = document.querySelector('[data-tab="' + targetId + '"]');
+        var targetPanel = document.getElementById(targetId);
 
-<!-- HOW TO USE IT -->
-<section id="quickstart">
-  <h2 class="section-title">How to Use It</h2>
-  <p class="section-subtitle">Three steps to resource-aware agent orchestration.</p>
+        if (targetBtn && targetPanel) {
+          targetBtn.classList.add('active');
+          targetBtn.setAttribute('aria-selected', 'true');
+          targetPanel.classList.add('active');
+        }
+      }
 
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">1</div>
-      <h3>Install</h3>
-      <div class="code-block" style="margin: 0.5rem 0 0;">
-        <code><span class="code-cmd">pip install</span> centurion</code>
-      </div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">2</div>
-      <h3>Start the Server</h3>
-      <div class="code-block" style="margin: 0.5rem 0 0;">
-        <code>
-<span class="code-comment"># Probes hardware, recommends config, starts server</span>
-<span class="code-cmd">centurion quickstart</span> <span class="code-flag">--agent-type</span> <span class="code-str">claude_cli</span>
-        </code>
-      </div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">3</div>
-      <h3>Integrate with Claude Code</h3>
-      <div class="code-block" style="margin: 0.5rem 0 0;">
-        <code>
-<span class="code-comment"># Option A: MCP Server</span>
-<span class="code-cmd">claude mcp add</span> centurion <span class="code-flag">--</span> python <span class="code-flag">-m</span> centurion.mcp
+      tabButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          switchTab(this.getAttribute('data-tab'));
+        });
+      });
 
-<span class="code-comment"># Option B: Claude Code Skill</span>
-<span class="code-cmd">python -m</span> centurion.skill <span class="code-flag">&gt;</span> ~/.claude/skills/centurion.toml
+      tabButtons.forEach(function (btn, index) {
+        btn.addEventListener('keydown', function (e) {
+          var dir = 0;
+          if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            dir = 1;
+          } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            dir = -1;
+          } else if (e.key === 'Home') {
+            tabButtons[0].focus();
+            switchTab(tabButtons[0].getAttribute('data-tab'));
+            e.preventDefault();
+            return;
+          } else if (e.key === 'End') {
+            tabButtons[tabButtons.length - 1].focus();
+            switchTab(tabButtons[tabButtons.length - 1].getAttribute('data-tab'));
+            e.preventDefault();
+            return;
+          }
 
-<span class="code-comment"># Option C: REST API</span>
-<span class="code-cmd">curl</span> http://localhost:8100/api/centurion/status
-        </code>
-      </div>
-    </div>
-  </div>
-</section>
+          if (dir !== 0) {
+            e.preventDefault();
+            var nextIndex = (index + dir + tabButtons.length) % tabButtons.length;
+            tabButtons[nextIndex].focus();
+            switchTab(tabButtons[nextIndex].getAttribute('data-tab'));
+          }
+        });
+      });
+      // Handle [data-tab-link] clicks (e.g. "Get Started" button)
+      document.querySelectorAll('[data-tab-link]').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+          switchTab(this.getAttribute('data-tab-link'));
+        });
+      });
+    })();
+  </script>
 
-<!-- LINKS -->
-<section id="links">
-  <h2 class="section-title">Ecosystem</h2>
-  <p class="section-subtitle">Centurion and related projects.</p>
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">&#9876;</div>
-      <h3>Centurion</h3>
-      <p>AI agent orchestration engine with K8s-inspired scheduling and hardware-aware resource management.</p>
-      <p style="margin-top: 0.75rem;"><a href="https://github.com/spacelobster88/centurion" class="btn btn-secondary" style="display: inline-flex; padding: 8px 16px; font-size: 0.85rem;">GitHub</a></p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">&#128260;</div>
-      <h3>Harness Loop</h3>
-      <p>Claude Code skill that decomposes projects into task DAGs and executes independent tasks in parallel. Best used with Centurion for safe scheduling.</p>
-      <p style="margin-top: 0.75rem;"><a href="https://github.com/spacelobster88/harness-loop" class="btn btn-secondary" style="display: inline-flex; padding: 8px 16px; font-size: 0.85rem;">GitHub</a></p>
-    </div>
-  </div>
-</section>
+  <!-- Case Study Pill Switching -->
+  <script>
+    (function () {
+      'use strict';
+      var pills = document.querySelectorAll('.cs-pill');
+      var panels = document.querySelectorAll('.cs-panel');
 
-<!-- CTA -->
-<div class="cta-section">
-  <h2>Ready to Command Your Army?</h2>
-  <p>pip install centurion &middot; one command to deploy &middot; MIT licensed</p>
-  <div class="hero-buttons">
-    <a href="https://github.com/spacelobster88/centurion" class="btn btn-primary">
-      Star on GitHub
-    </a>
-    <a href="https://github.com/spacelobster88/centurion/blob/main/CONTRIBUTING.md" class="btn btn-secondary">
-      Contribute
-    </a>
-  </div>
-</div>
+      pills.forEach(function (pill) {
+        pill.addEventListener('click', function () {
+          var target = this.getAttribute('data-cs');
 
-<footer>
-  <p>Centurion &copy; 2026 &middot; MIT License &middot; Built with Roman military precision</p>
-</footer>
+          // Update pill states
+          pills.forEach(function (p) {
+            p.classList.remove('active');
+          });
+          this.classList.add('active');
+
+          // Show/hide panels
+          panels.forEach(function (panel) {
+            if (panel.id === target) {
+              panel.style.display = 'block';
+              panel.classList.add('active');
+            } else {
+              panel.style.display = 'none';
+              panel.classList.remove('active');
+            }
+          });
+        });
+      });
+    })();
+  </script>
 
 </body>
 </html>
