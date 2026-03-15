@@ -38,12 +38,12 @@ AI coding agents operate at three distinct layers. Understanding this hierarchy 
 │  ✦ Can OOM-kill the system (120 GB leaks documented)                 │
 │  ✦ maxParallelAgents requested but closed NOT_PLANNED (#15487)       │
 ├──────────────────────────────────────────────────────────────────────┤
-│  Layer 3: Centurion + Harness Loop                   ◀── THIS REPO  │
+│  Layer 3: Centurion + Harness Loop                    ◀── THIS REPO  │
 │                                                                      │
 │  The managed layer. Centurion provides fleet-level resource mgmt.    │
 │  Harness Loop provides project-level task orchestration.             │
 │  Together they enable safe, structured parallel execution.           │
-│  ✦ Scope: entire machine — multiple projects simultaneously         │
+│  ✦ Scope: entire machine — multiple projects simultaneously          │
 │  ✦ Hardware-aware scheduling prevents OOM (K8s-style admission)      │
 │  ✦ DAG-based task decomposition with phase progression               │
 │  ✦ Real-time broadcasting + event streaming (Aquilifer)              │
