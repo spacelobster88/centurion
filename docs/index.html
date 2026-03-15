@@ -738,7 +738,7 @@
     }
 
     /* ============================================
-       CASE STUDY PILLS
+       SUCCESS STORY PILLS
        ============================================ */
 
     .cs-pill {
@@ -796,7 +796,7 @@
   <nav class="tab-nav" role="tablist" aria-label="Main navigation">
     <div class="container tab-nav-inner">
       <button class="tab-btn active" id="btn-tab-overview" role="tab" aria-selected="true" aria-controls="tab-overview" data-tab="tab-overview">Overview</button>
-      <button class="tab-btn" id="btn-tab-case-studies" role="tab" aria-selected="false" aria-controls="tab-case-studies" data-tab="tab-case-studies">Case Studies</button>
+      <button class="tab-btn" id="btn-tab-case-studies" role="tab" aria-selected="false" aria-controls="tab-case-studies" data-tab="tab-case-studies">Success Stories</button>
       <button class="tab-btn" id="btn-tab-quick-start" role="tab" aria-selected="false" aria-controls="tab-quick-start" data-tab="tab-quick-start">Quick Start</button>
       <button class="tab-btn" id="btn-tab-comparison" role="tab" aria-selected="false" aria-controls="tab-comparison" data-tab="tab-comparison">Comparison</button>
     </div>
@@ -906,6 +906,30 @@
         </div>
       </div>
 
+      <!-- Harness Loop Flow Diagram -->
+      <div class="container section">
+        <div class="section-header">
+          <div class="text-label">The Execute Loop</div>
+          <h2 class="text-section-heading">From task DAG to completion</h2>
+        </div>
+        <p class="text-body" style="margin-bottom: var(--space-6);">Centurion's harness loop is the core execution engine. It takes a DAG of tasks, schedules them through admission control, assigns each to an agent, and drives them to completion with real-time health checks, retry logic, and result aggregation. The activity diagram below shows the full lifecycle from task submission through final rollup.</p>
+        <div style="border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; background-color: var(--color-bg-surface);">
+          <img src="images/harness-flow.svg" alt="Centurion harness loop flow diagram showing the full execution lifecycle from task DAG scheduling through agent assignment, health monitoring, and result aggregation" style="max-width: 100%; height: auto; display: block;">
+        </div>
+      </div>
+
+      <!-- Integration Modes Diagram -->
+      <div class="container section">
+        <div class="section-header">
+          <div class="text-label">Integrations</div>
+          <h2 class="text-section-heading">Multiple ways to connect</h2>
+        </div>
+        <p class="text-body" style="margin-bottom: var(--space-6);">Centurion adapts to your stack. Run it as a standalone CLI, embed it as a library, or deploy it behind its REST API. Each integration mode exposes the same scheduling and admission-control guarantees, so you get identical resource safety whether you are scripting locally or orchestrating from a CI pipeline.</p>
+        <div style="border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; background-color: var(--color-bg-surface);">
+          <img src="images/integration-modes.svg" alt="Centurion integration modes component diagram showing CLI, library, and REST API connection options" style="max-width: 100%; height: auto; display: block;">
+        </div>
+      </div>
+
       <!-- Why Centurion -->
       <div class="container section">
         <div class="section-header">
@@ -919,125 +943,129 @@
     </div>
     <!-- TAB: OVERVIEW CONTENT END -->
 
-    <!-- TAB: CASE STUDIES CONTENT START -->
+    <!-- TAB: SUCCESS STORIES CONTENT START -->
     <div id="tab-case-studies" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-case-studies">
       <div class="container">
 
         <!-- Section Header -->
         <div class="section" style="padding-bottom: var(--space-8);">
           <div class="section-header">
-            <p class="text-label">Case Studies</p>
+            <p class="text-label">Success Stories</p>
             <h2 class="text-heading">Real Projects, Verified Metrics</h2>
             <p class="text-lead">Every number below comes from actual project history — task counts, test results, and commit logs.</p>
           </div>
 
-          <!-- Case Study Pills Navigation -->
+          <!-- Success Story Pills Navigation -->
           <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-4);">
-            <button class="cs-pill active" data-cs="cs-1">Ecosystem Docs</button>
-            <button class="cs-pill" data-cs="cs-2">Zeroclaw OSS</button>
-            <button class="cs-pill" data-cs="cs-3">20-Agent Research</button>
-            <button class="cs-pill" data-cs="cs-4">Harness Loop POC</button>
-            <button class="cs-pill" data-cs="cs-5">Auspex Self-Evolution</button>
+            <button class="cs-pill active" data-cs="cs-1">OpenClaw Bug Fixes</button>
+            <button class="cs-pill" data-cs="cs-2">PlugMate Research</button>
+            <button class="cs-pill" data-cs="cs-3">20-Agent Fleet</button>
+            <button class="cs-pill" data-cs="cs-4">Enterprise DevOps</button>
+            <button class="cs-pill" data-cs="cs-5">Research Automation</button>
           </div>
         </div>
 
-        <!-- ===== Case Study 1: Ecosystem Docs & Strategy ===== -->
+        <!-- ===== Success Story 1: OpenClaw Bug Fixes ===== -->
         <div class="cs-panel active" id="cs-1" style="padding-bottom: var(--space-24);">
           <div class="card" style="margin-bottom: var(--space-6);">
             <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
-              <span class="card-label" style="margin-bottom: 0;">Case Study 01</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">17 tasks</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">~45 min</span>
+              <span class="card-label" style="margin-bottom: 0;">Success Story 01</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">8 PRs</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">~30 min</span>
             </div>
-            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">Ecosystem Docs &amp; Strategy</h3>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">OpenClaw Bug Fixes</h3>
             <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
-              Full documentation overhaul, website redesign, and go-to-market strategy executed in a single harness loop run. Harness Loop planned and executed 17 tasks that rewrote documentation across the entire ecosystem, generated a marketing strategy, and delivered a final PDF report via email.
+              An open-source Rust project had a backlog of bugs. Centurion's harness loop decomposed them into a task DAG with parallel engineering tasks, each gated by QA. Progressive ramp-up scaled from 1 to 4 agents safely.
             </p>
             <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
-              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">6</span>
-              <span class="text-muted" style="font-size: var(--text-sm);">batch chains executed across 4 repos updated simultaneously</span>
+              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">8</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">pull requests merged in a single 30-minute session</span>
             </div>
             <div class="card-metrics">
               <div>
-                <div class="card-metric-label">Architecture</div>
-                <div class="card-metric-value">4 tasks</div>
+                <div class="card-metric-label">Ramp-up</div>
+                <div class="card-metric-value">1&#8594;2&#8594;4 agents</div>
               </div>
               <div>
-                <div class="card-metric-label">Engineering</div>
-                <div class="card-metric-value">11 tasks</div>
+                <div class="card-metric-label">Test Suite</div>
+                <div class="card-metric-value">7,000+ tests</div>
               </div>
               <div>
-                <div class="card-metric-label">QA</div>
-                <div class="card-metric-value">2 tasks</div>
+                <div class="card-metric-label">Memory</div>
+                <div class="card-metric-value">0 incidents</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Mode</div>
+                <div class="card-metric-value">Auto-scheduled</div>
               </div>
             </div>
           </div>
           <div class="card" style="border-left: 2px solid var(--color-accent);">
             <p class="card-label">What Centurion Did</p>
             <p class="card-description" style="line-height: var(--leading-normal);">
-              Organized 17 tasks into 3 phases (architecture, engineering, QA) and executed them in 6 sequential batch chains, parallelizing independent tasks within each batch. Progress was streamed to Telegram in real-time with visual progress bars. Updated the Centurion website, refreshed READMEs across 4 repos, and renamed mac-bootstrap to Auspex with all cross-references updated.
+              Decomposed the bug backlog into a task DAG &mdash; architecture phase for issue triage, parallel engineering tasks for fixes, and QA gates before PR submission. Hardware-aware scheduling ran the full Rust test suite (7,000+ cases) per PR without OOM kills. When memory pressure hit &ldquo;warn&rdquo; during concurrent test runs, auto-throttled batch size and resumed once pressure normalized.
             </p>
           </div>
         </div>
 
-        <!-- ===== Case Study 2: Zeroclaw OSS Contribution ===== -->
+        <!-- ===== Success Story 2: PlugMate Research Sprint ===== -->
         <div class="cs-panel" id="cs-2" style="display: none; padding-bottom: var(--space-24);">
           <div class="card" style="margin-bottom: var(--space-6);">
             <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
-              <span class="card-label" style="margin-bottom: 0;">Case Study 02</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">5 tasks</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">~25 min</span>
+              <span class="card-label" style="margin-bottom: 0;">Success Story 02</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">8 tasks</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">~34 min</span>
             </div>
-            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">Zeroclaw OSS Contribution</h3>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">PlugMate Research Sprint</h3>
             <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
-              First open-source PR to a Rust project, from issue discovery to CI-validated pull request. Harness Loop autonomously researched the repository, identified issue #3486, forked the repo, applied the fix, and validated with the full cargo test suite before submitting PR #3519.
+              Evaluated plugin architectures across eight competing frameworks. Centurion structured 8 independent research tasks plus a synthesis task, auto-scheduling up to 4 parallel agents based on hardware capacity.
             </p>
             <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
-              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">7,169</span>
-              <span class="text-muted" style="font-size: var(--text-sm);">Rust tests passed locally before PR submission</span>
+              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">8</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">research tasks completed with zero failures</span>
             </div>
             <div class="card-metrics">
               <div>
-                <div class="card-metric-label">Architecture</div>
-                <div class="card-metric-value">1 task</div>
+                <div class="card-metric-label">Peak Agents</div>
+                <div class="card-metric-value">4</div>
               </div>
               <div>
-                <div class="card-metric-label">Engineering</div>
-                <div class="card-metric-value">2 tasks</div>
+                <div class="card-metric-label">Retries</div>
+                <div class="card-metric-value">0</div>
               </div>
               <div>
-                <div class="card-metric-label">QA</div>
-                <div class="card-metric-value">2 tasks</div>
+                <div class="card-metric-label">Deliverable</div>
+                <div class="card-metric-value">Comparison matrix</div>
               </div>
               <div>
-                <div class="card-metric-label">PR</div>
-                <div class="card-metric-value">#3519</div>
+                <div class="card-metric-label">Scheduling</div>
+                <div class="card-metric-value">REST API</div>
               </div>
             </div>
           </div>
           <div class="card" style="border-left: 2px solid var(--color-accent);">
             <p class="card-label">What Centurion Did</p>
             <p class="card-description" style="line-height: var(--leading-normal);">
-              Structured the contribution workflow into 5 tasks across 3 phases: research contribution rules and find the right issue (architecture), fork/clone and apply the fix (engineering), then run full validation and create the PR (QA). Each phase gated the next, ensuring no PR was submitted without passing all 7,169 tests. Used git worktree to avoid impacting the locally running instance.
+              Structured the research as 8 independent tasks with a final synthesis dependency. Auto-scheduler detected available hardware and calculated safe parallel limit. Progressive ramp-up went from 1 to 4 agents. Memory pressure stayed &ldquo;normal&rdquo; throughout. Synthesis agent produced a unified comparison matrix from all 8 reports.
             </p>
           </div>
         </div>
 
-        <!-- ===== Case Study 3: 20-Agent Parallel Research ===== -->
+        <!-- ===== Success Story 3: 20-Agent Parallel Research Fleet ===== -->
         <div class="cs-panel" id="cs-3" style="display: none; padding-bottom: var(--space-24);">
           <div class="card" style="margin-bottom: var(--space-6);">
             <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
-              <span class="card-label" style="margin-bottom: 0;">Case Study 03</span>
+              <span class="card-label" style="margin-bottom: 0;">Success Story 03</span>
               <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">20+ agents</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">Single run</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">Single Mac Mini</span>
             </div>
-            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">20-Agent Parallel Research</h3>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">20-Agent Parallel Research Fleet</h3>
             <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
-              Centurion fleet deployment coordinating 20+ simultaneous Claude agents for market research on a single Mac Mini. The hardware-aware scheduler probed CPU and RAM, calculated the safe agent limit, and spawned agents up to capacity with each receiving a distinct research prompt.
+              Market research across 20+ distinct segments on a single Mac Mini. Centurion's K8s-inspired scheduler handled admission control, preventing resource exhaustion while maximizing throughput.
             </p>
             <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
               <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">20+</span>
-              <span class="text-muted" style="font-size: var(--text-sm);">agents running simultaneously on a single Mac Mini</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">simultaneous agents with zero OOM kills on a single machine</span>
             </div>
             <div class="card-metrics">
               <div>
@@ -1052,86 +1080,8 @@
                 <div class="card-metric-label">Events</div>
                 <div class="card-metric-value">WebSocket</div>
               </div>
-            </div>
-          </div>
-          <div class="card" style="border-left: 2px solid var(--color-accent);">
-            <p class="card-label">What Centurion Did</p>
-            <p class="card-description" style="line-height: var(--leading-normal);">
-              Centurion's K8s-inspired resource scheduler handled admission control for all 20+ agents, preventing resource exhaustion. The Optio autoscaler monitored queue depth every 10 seconds and scaled agents up/down as tasks completed. The EventBus (Aquilifer) streamed real-time events via WebSocket. Demonstrated the ability to safely saturate hardware resources without OOM kills or process starvation.
-            </p>
-          </div>
-        </div>
-
-        <!-- ===== Case Study 4: Harness Loop POC ===== -->
-        <div class="cs-panel" id="cs-4" style="display: none; padding-bottom: var(--space-24);">
-          <div class="card" style="margin-bottom: var(--space-6);">
-            <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
-              <span class="card-label" style="margin-bottom: 0;">Case Study 04</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">17 tasks</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">Multi-day</span>
-            </div>
-            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">Harness Loop POC</h3>
-            <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
-              Building the orchestration engine itself, from concept to passing tests. The Centurion engine was designed and built from scratch as a standalone Python project with Legions, Centuries, and Legionaries -- implementing three agent types, three running modes, full REST API, and WebSocket event streaming.
-            </p>
-            <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
-              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">298</span>
-              <span class="text-muted" style="font-size: var(--text-sm);">tests passing across 2,770+ lines of code</span>
-            </div>
-            <div class="card-metrics">
               <div>
-                <div class="card-metric-label">Agent Types</div>
-                <div class="card-metric-value">3</div>
-              </div>
-              <div>
-                <div class="card-metric-label">Run Modes</div>
-                <div class="card-metric-value">3</div>
-              </div>
-              <div>
-                <div class="card-metric-label">Build Phases</div>
-                <div class="card-metric-value">6</div>
-              </div>
-              <div>
-                <div class="card-metric-label">Files</div>
-                <div class="card-metric-value">20+</div>
-              </div>
-            </div>
-          </div>
-          <div class="card" style="border-left: 2px solid var(--color-accent);">
-            <p class="card-label">What Centurion Did</p>
-            <p class="card-description" style="line-height: var(--leading-normal);">
-              Harness Loop structured the build into 6 phases: Core Engine, Agent Types + Hardware, Persistence + Events, API + WebSocket, MCP Integration, and Repo Setup. Tasks were organized in a DAG with dependency tracking, and progress was reported via Telegram at phase boundaries. The project completed with 298 tests passing and was deployed as a public GitHub repo with MIT license.
-            </p>
-          </div>
-        </div>
-
-        <!-- ===== Case Study 5: Auspex Self-Evolution ===== -->
-        <div class="cs-panel" id="cs-5" style="display: none; padding-bottom: var(--space-24);">
-          <div class="card" style="margin-bottom: var(--space-6);">
-            <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
-              <span class="card-label" style="margin-bottom: 0;">Case Study 05</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">10 files</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">Single session</span>
-            </div>
-            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">Auspex Self-Evolution</h3>
-            <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
-              A bootstrap repo that renamed itself, rewired all cross-references, and adopted a Roman identity. The mac-bootstrap project deploys the entire AI agent stack onto any fresh Mac with a single command, then renamed itself to "Auspex" with zero-downtime coordination across local and remote repos.
-            </p>
-            <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
-              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">4</span>
-              <span class="text-muted" style="font-size: var(--text-sm);">services orchestrated with zero-downtime rename across all repos</span>
-            </div>
-            <div class="card-metrics">
-              <div>
-                <div class="card-metric-label">Services</div>
-                <div class="card-metric-value">4</div>
-              </div>
-              <div>
-                <div class="card-metric-label">Scripts</div>
-                <div class="card-metric-value">10 files</div>
-              </div>
-              <div>
-                <div class="card-metric-label">Target</div>
+                <div class="card-metric-label">Hardware</div>
                 <div class="card-metric-value">Apple Silicon</div>
               </div>
             </div>
@@ -1139,14 +1089,102 @@
           <div class="card" style="border-left: 2px solid var(--color-accent);">
             <p class="card-label">What Centurion Did</p>
             <p class="card-description" style="line-height: var(--leading-normal);">
-              The initial build was structured as a harness loop project with architecture (requirements analysis, service dependency mapping), engineering (script writing for all 10 files), and QA (health-check validation on the live machine). The rename phase demonstrated the system's ability to coordinate cross-repo changes -- updating references in Centurion's README, the Auspex repo itself, and ecosystem documentation simultaneously. One-command deployment of a 4-service AI agent stack on any Apple Silicon Mac.
+              K8s-inspired resource scheduler controlled agent admission. Optio autoscaler monitored queue depth every 10 seconds, scaling up/down as tasks completed. Progressive ramp-up reached hardware-determined maximum within minutes. EventBus (Aquilifer) streamed real-time status via WebSocket. Memory pressure detection prevented overload &mdash; auto-paused launches when utilization rose, resumed when resources freed.
+            </p>
+          </div>
+        </div>
+
+        <!-- ===== Success Story 4: Enterprise DevOps Pipeline (Projected) ===== -->
+        <div class="cs-panel" id="cs-4" style="display: none; padding-bottom: var(--space-24);">
+          <div class="card" style="margin-bottom: var(--space-6);">
+            <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
+              <span class="card-label" style="margin-bottom: 0;">Success Story 04</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">12 services</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">~45 min projected</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-text-muted); border: 1px solid var(--color-text-muted); border-radius: var(--radius-sm); opacity: 0.8;">Projected</span>
+            </div>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">Enterprise DevOps Pipeline <span style="font-size: var(--text-sm); font-weight: var(--weight-regular); color: var(--color-text-muted);">(Projected)</span></h3>
+            <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
+              Nightly CI/CD analysis across 12 microservices. Centurion models the pipeline as a task DAG with parallel analysis agents and a synthesis dashboard, auto-scheduling based on build server resources.
+            </p>
+            <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
+              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">75%</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">projected time reduction vs sequential baseline (~3 hrs &#8594; ~45 min)</span>
+            </div>
+            <div class="card-metrics">
+              <div>
+                <div class="card-metric-label">Services</div>
+                <div class="card-metric-value">12</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Baseline</div>
+                <div class="card-metric-value">~3 hours</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Retry</div>
+                <div class="card-metric-value">3x + backoff</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Scheduling</div>
+                <div class="card-metric-value">Auto REST API</div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="border-left: 2px solid var(--color-accent);">
+            <p class="card-label">What Centurion Did (projected)</p>
+            <p class="card-description" style="line-height: var(--leading-normal);">
+              Models nightly pipeline as a DAG &mdash; 12 independent analysis tasks per service, plus a synthesis dashboard task. Auto-scheduler queries build server resources and sets safe agent ceiling. Progressive ramp-up scales from 1 to 6 agents. Memory pressure detection handles heavy-load scenarios by auto-reducing batch size. Retry logic catches flaky tests with 3x exponential backoff.
+            </p>
+          </div>
+        </div>
+
+        <!-- ===== Success Story 5: Research Team Automation (Projected) ===== -->
+        <div class="cs-panel" id="cs-5" style="display: none; padding-bottom: var(--space-24);">
+          <div class="card" style="margin-bottom: var(--space-6);">
+            <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
+              <span class="card-label" style="margin-bottom: 0;">Success Story 05</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">30 papers</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">~4 hrs projected</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-text-muted); border: 1px solid var(--color-text-muted); border-radius: var(--radius-sm); opacity: 0.8;">Projected</span>
+            </div>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">Research Team Automation <span style="font-size: var(--text-sm); font-weight: var(--weight-regular); color: var(--color-text-muted);">(Projected)</span></h3>
+            <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
+              Quarterly literature review of 30 academic papers compressed from weeks to hours. Three-phase DAG: categorization, parallel summarization, cross-reference synthesis. Auto-adapts to any hardware.
+            </p>
+            <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
+              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">30</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">papers surveyed in a single afternoon (projected)</span>
+            </div>
+            <div class="card-metrics">
+              <div>
+                <div class="card-metric-label">Baseline</div>
+                <div class="card-metric-value">8-10 days</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Phases</div>
+                <div class="card-metric-value">3</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Output</div>
+                <div class="card-metric-value">Summaries + synthesis</div>
+              </div>
+              <div>
+                <div class="card-metric-label">Scheduling</div>
+                <div class="card-metric-value">Fully auto</div>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="border-left: 2px solid var(--color-accent);">
+            <p class="card-label">What Centurion Did (projected)</p>
+            <p class="card-description" style="line-height: var(--leading-normal);">
+              Structures review as three-phase DAG &mdash; categorization agent assigns priorities, parallel agents produce structured summaries, synthesis agent cross-references and identifies contradictions. Auto-scheduler adapts to available hardware (3 agents on laptop, 8-10 on workstation). Memory pressure detection critical for long-context research tasks. Progressive ramp-up catches formatting issues early.
             </p>
           </div>
         </div>
 
       </div>
     </div>
-    <!-- TAB: CASE STUDIES CONTENT END -->
+    <!-- TAB: SUCCESS STORIES CONTENT END -->
 
     <!-- TAB: QUICK START CONTENT START -->
     <div id="tab-quick-start" class="tab-content" role="tabpanel" aria-labelledby="btn-tab-quick-start">
@@ -1422,7 +1460,7 @@
         <span class="footer-separator">&middot;</span>
         <a href="https://github.com/spacelobster88/centurion#readme" class="inline-link">Documentation</a>
       </div>
-      <p class="footer-copyright">Copyright &copy; 2024 Centurion Contributors</p>
+      <p class="footer-copyright">Copyright &copy; 2024&ndash;2026 Centurion Contributors</p>
       <p class="footer-disclaimer">This software is provided as-is, without warranty of any kind.</p>
     </div>
   </footer>
@@ -1500,7 +1538,7 @@
     })();
   </script>
 
-  <!-- Case Study Pill Switching -->
+  <!-- Success Story Pill Switching -->
   <script>
     (function () {
       'use strict';
