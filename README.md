@@ -469,6 +469,23 @@ Centurion reads configuration from environment variables with sensible defaults.
 | `CENTURION_CLAUDE_MODEL`      | `claude-sonnet-4-6`        | Default model for Claude API agent type          |
 | `ANTHROPIC_API_KEY`           | (none)                     | Anthropic API key for `claude_api` agent type    |
 
+## Success Stories
+
+Real projects orchestrated by Centurion. Every number comes from actual task logs and commit history.
+
+| # | Project | Result | Key Metric |
+|---|---------|--------|------------|
+| 01 | **OpenClaw Bug Fixes** | 8 PRs merged in 30 min | 7,000+ Rust tests per PR, zero OOM kills |
+| 02 | **PlugMate Research** | 8 research tasks in 34 min | 4 peak parallel agents, zero retries |
+| 03 | **20-Agent Fleet** | 20+ agents on a single Mac Mini | Zero OOM kills, zero process starvation |
+| 04 | **Enterprise DevOps** *(projected)* | 12 microservices, ~75% time reduction | 3 hrs sequential → ~45 min parallel |
+| 05 | **Research Automation** *(projected)* | 30 papers in ~4 hrs | 8-10 researcher-days → single afternoon |
+| 06 | **CI Pipeline Build** | 10 tasks, 13 files, 4 orphans cleaned | QA agent found hanging tests, gateway cleaned leaked processes |
+
+**Story 06 highlight — Orphan Process Lifecycle:** During CI pipeline construction, a QA subagent ran `pytest` against the full test suite. Two websocket tests hung due to asyncio threading issues, spawning 4 background processes that never terminated. Claude Code's subagent completed and returned, but the orphaned OS processes kept running. Centurion's gateway session manager detected the leaked processes at session boundary, terminated all 4 cleanly, and sent status notifications — zero data loss, zero manual intervention.
+
+→ [View all stories on the website](https://spacelobster88.github.io/centurion/)
+
 ## Contributing
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
