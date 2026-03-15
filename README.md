@@ -51,7 +51,7 @@ AI coding agents operate at three distinct layers. Understanding this hierarchy 
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-| | Agent Loop | Harness Loop | Centurion |
+| | Agent Loop | [Harness Loop](https://github.com/spacelobster88/harness-loop) | Centurion |
 |---|---|---|---|
 | **Scope** | Single task | Single project | Multiple projects / fleets |
 | **Parallelism** | 1 (sequential) | ~6 subagents | **100+ agents** |
@@ -62,9 +62,9 @@ AI coding agents operate at three distinct layers. Understanding this hierarchy 
 | **Broadcasting** | No | No | **Yes (all/legion/century)** |
 | **When to use** | Quick fixes | Structured projects | Large-scale parallel work |
 
-> **These three layers are complementary, not competing.** Harness Loop can run standalone (using `vm_stat` for local resource checks), but when Centurion is running, Harness Loop automatically queries Centurion's `/api/scheduler` for resource-aware scheduling — available RAM, memory pressure, and active agent count — so multiple projects never fight for the same resources.
+> **These three layers are complementary, not competing.** [Harness Loop](https://github.com/spacelobster88/harness-loop) can run standalone (using `vm_stat` for local resource checks), but when Centurion is running, Harness Loop automatically queries Centurion's `/api/scheduler` for resource-aware scheduling — available RAM, memory pressure, and active agent count — so multiple projects never fight for the same resources.
 
-> **Getting started?** Use [Armory](https://github.com/spacelobster88/armory) to set up the full stack (Centurion + Harness Loop + Claude gateway) on a fresh Mac in one command.
+> **Getting started?** Use [Auspex](https://github.com/spacelobster88/auspex) to set up the full stack (Centurion + [Harness Loop](https://github.com/spacelobster88/harness-loop) + Claude gateway) on a fresh Mac in one command.
 
 ---
 
@@ -486,4 +486,4 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-**[Documentation & Website](https://spacelobster88.github.io/centurion/)** | **[GitHub](https://github.com/spacelobster88/centurion)** | **[Armory (full-stack installer)](https://github.com/spacelobster88/armory)**
+**[Documentation & Website](https://spacelobster88.github.io/centurion/)** | **[GitHub](https://github.com/spacelobster88/centurion)** | **[Auspex (full-stack installer)](https://github.com/spacelobster88/auspex)**
