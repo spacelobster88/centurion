@@ -222,6 +222,60 @@ async def _quickstart_bootstrap(
     print()
 
 
+def _ensure_harness_loop() -> None:
+    """Install or update harness-loop as a Claude Code skill."""
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    skill_dir = Path.home() / ".claude" / "skills" / "harness-loop"
+    repo_url = "https://github.com/spacelobster88/harness-loop.git"
+
+    # Candidate source directories (prefer existing local clone)
+    local_clone = Path.home() / "Projects" / "harness-loop"
+
+    if skill_dir.is_symlink():
+        target = skill_dir.resolve()
+        if target.is_dir() and (target / "SKILL.md").exists():
+            # Already installed — try to update via git pull
+            try:
+                subprocess.run(
+                    ["git", "pull", "--ff-only"],
+                    cwd=str(target), capture_output=True, timeout=15,
+                )
+                print("  Harness Loop: already installed, updated ✓")
+            except Exception:
+                print("  Harness Loop: already installed ✓")
+            return
+        # Broken symlink — remove and reinstall
+        skill_dir.unlink()
+
+    if skill_dir.is_dir():
+        # Real directory (not symlink) — skip with warning
+        print(f"  Harness Loop: directory exists at {skill_dir} (not a symlink)")
+        print(f"  To update, remove it first: rm -rf {skill_dir}")
+        return
+
+    # Fresh install: clone if no local copy exists
+    if not local_clone.is_dir():
+        print("  Harness Loop: cloning from GitHub...")
+        try:
+            subprocess.run(
+                ["git", "clone", repo_url, str(local_clone)],
+                capture_output=True, timeout=60, check=True,
+            )
+        except Exception as e:
+            print(f"  Harness Loop: clone failed ({e}). Install manually:")
+            print(f"    git clone {repo_url} {local_clone}")
+            print(f"    {local_clone}/install.sh --global")
+            return
+
+    # Create symlink
+    skill_dir.parent.mkdir(parents=True, exist_ok=True)
+    skill_dir.symlink_to(local_clone)
+    print(f"  Harness Loop: installed ✓  ({skill_dir} → {local_clone})")
+
+
 def cmd_quickstart(args: argparse.Namespace) -> None:
     """One-click quickstart: probe hardware, recommend, and launch."""
     agent_type: str = args.agent_type
@@ -229,6 +283,10 @@ def cmd_quickstart(args: argparse.Namespace) -> None:
 
     # Print banner
     print(QUICKSTART_HEADER)
+
+    # Ensure harness-loop skill is installed
+    _ensure_harness_loop()
+    print()
 
     # Probe and display
     rec = _build_recommendation()
