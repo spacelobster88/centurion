@@ -18,8 +18,8 @@
 AI coding agents operate at three distinct layers. Understanding this hierarchy is key to choosing the right tool — and knowing when you need Centurion.
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│  Layer 1: Claude Code Agent Loop (built-in)                          │
+┌──────────────────────────────────────────────────────────────────────┐
+│  Layer 1: Raw Agentic Loop (built-in to Claude Code)                 │
 │                                                                      │
 │  The inner loop. think → tool → observe → repeat.                    │
 │  One agent works on one task sequentially.                           │
@@ -27,44 +27,48 @@ AI coding agents operate at three distinct layers. Understanding this hierarchy 
 │  ✦ No parallelism — one tool call at a time                          │
 │  ✦ No persistent state across sessions                               │
 │  ✦ This is what you get out of the box with Claude Code.             │
-├─────────────────────────────────────────────────────────────────────┤
-│  Layer 2: Harness Loop (single-project orchestrator)                 │
+├──────────────────────────────────────────────────────────────────────┤
+│  Layer 2: Claude Code Subagent Mode                                  │
 │                                                                      │
-│  An outer loop that rides on Layer 1. Customizable "Ralph Loop"      │
-│  implementation — decomposes a project into a task DAG and           │
-│  dispatches independent tasks to background subagents.               │
-│  ✦ Scope: one project (e.g., "build a REST API", "write a report")  │
-│  ✦ Up to ~6 parallel subagents via Claude Code's Agent tool          │
-│  ✦ Persistent state in .harness/tasks.json (survives restarts)       │
-│  ✦ Phase-based progression: requirements → design → build → QA       │
-│  ✦ Can run standalone OR query Centurion for smarter scheduling      │
-├─────────────────────────────────────────────────────────────────────┤
-│  Layer 3: Centurion (fleet coordinator)            ◀── YOU ARE HERE  │
+│  Spawns background agents via the Agent tool. Multiple tasks run     │
+│  concurrently, but with zero resource awareness.                     │
+│  ✦ Scope: parallel subtasks within one session                       │
+│  ✦ Unlimited spawning — no memory or CPU checks                      │
+│  ✦ No scheduling, no queuing, no backpressure                        │
+│  ✦ Can OOM-kill the system (120 GB leaks documented)                 │
+│  ✦ maxParallelAgents requested but closed NOT_PLANNED (#15487)       │
+├──────────────────────────────────────────────────────────────────────┤
+│  Layer 3: Centurion + Harness Loop                   ◀── THIS REPO  │
 │                                                                      │
-│  The fleet layer. Manages 100+ agents across multiple projects.      │
-│  ✦ Scope: entire machine — multiple projects running simultaneously  │
-│  ✦ Hardware-aware scheduling prevents OOM (K8s-style admission ctrl) │
-│  ✦ Real-time broadcasting: update all agents mid-execution           │
-│  ✦ Event streaming via WebSocket (Aquilifer event bus)               │
+│  The managed layer. Centurion provides fleet-level resource mgmt.    │
+│  Harness Loop provides project-level task orchestration.             │
+│  Together they enable safe, structured parallel execution.           │
+│  ✦ Scope: entire machine — multiple projects simultaneously         │
+│  ✦ Hardware-aware scheduling prevents OOM (K8s-style admission)      │
+│  ✦ DAG-based task decomposition with phase progression               │
+│  ✦ Real-time broadcasting + event streaming (Aquilifer)              │
 │  ✦ Auto-scaling (Optio) adjusts fleet size based on resources        │
-│  ✦ 5 integration methods: REST API, MCP, Skill, A2A, Python library │
-└─────────────────────────────────────────────────────────────────────┘
+│  ✦ pip install centurion installs both Centurion + Harness Loop      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-| | Agent Loop | [Harness Loop](https://github.com/spacelobster88/harness-loop) | Centurion |
+| | Raw Agentic Loop | Claude Code Subagents | Centurion + Harness Loop |
 |---|---|---|---|
-| **Scope** | Single task | Single project | Multiple projects / fleets |
-| **Parallelism** | 1 (sequential) | ~6 subagents | **100+ agents** |
-| **State** | In-memory only | `.harness/` files | SQLite + in-memory |
-| **Scheduling** | None | DAG-based | **Hardware-aware, K8s-style** |
+| **Scope** | Single task | Parallel subtasks | **Multiple projects / fleets** |
+| **Parallelism** | 1 (sequential) | Unlimited (dangerous) | **100+ agents, managed** |
+| **Resource awareness** | None | None | **RAM/CPU probing, admission control** |
+| **Memory safety** | N/A | OOM risk ([#4953](https://github.com/anthropics/claude-code/issues/4953)) | **Pressure detection + backpressure** |
+| **Scheduling** | None | None | **K8s-style, hardware-aware** |
+| **Task decomposition** | Manual | Manual | **Automatic DAG with phases** |
+| **State persistence** | In-memory only | None | **`.harness/` + SQLite** |
 | **Cross-project coordination** | No | No | **Yes** |
 | **Auto-scaling** | No | No | **Yes (Optio)** |
 | **Broadcasting** | No | No | **Yes (all/legion/century)** |
-| **When to use** | Quick fixes | Structured projects | Large-scale parallel work |
+| **When to use** | Quick fixes | Simple parallel tasks | **Structured projects at scale** |
 
-> **These three layers are complementary, not competing.** [Harness Loop](https://github.com/spacelobster88/harness-loop) can run standalone (using `vm_stat` for local resource checks), but when Centurion is running, Harness Loop automatically queries Centurion's `/api/scheduler` for resource-aware scheduling — available RAM, memory pressure, and active agent count — so multiple projects never fight for the same resources.
+> **Centurion and Harness Loop ship together.** `pip install centurion` installs both. Harness Loop handles project-level task orchestration (decompose → schedule → execute → review), while Centurion handles fleet-level resource management (how many agents, on what hardware, with what limits). Together they solve the problem that Claude Code subagents create: unmanaged parallelism that crashes your machine.
 
-> **Getting started?** Use [Auspex](https://github.com/spacelobster88/auspex) to set up the full stack (Centurion + [Harness Loop](https://github.com/spacelobster88/harness-loop) + Claude gateway) on a fresh Mac in one command.
+> **Getting started?** Use [Auspex](https://github.com/spacelobster88/auspex) to set up the full stack (Centurion + Harness Loop + Claude gateway) on a fresh Mac in one command.
 
 ---
 
@@ -73,40 +77,40 @@ AI coding agents operate at three distinct layers. Understanding this hierarchy 
 Centurion is an AI agent orchestration engine that manages fleets of AI agents at scale. While most frameworks stop at 1-2 agents, Centurion scales to **100+ concurrent agents** with hardware-aware scheduling, real-time broadcasting, and five integration methods.
 
 ```
-                          +-----------------------+
-                          |      CENTURION        |
-                          |    Control Plane       |
-                          +----------+------------+
-                                     |
-              +----------------------+----------------------+
-              |                      |                      |
-     +--------v--------+   +--------v--------+   +---------v-------+
-     |   Scheduler      |   |   Broadcaster    |   |   EventBus      |
-     | (K8s-inspired    |   | (all/legion/     |   |  (Aquilifer)     |
-     |  admission ctrl) |   |  century scope)  |   |  WebSocket pub-  |
-     +--------+---------+   +--------+---------+   |  sub events      |
-              |                      |              +---------+-------+
-              +----------------------+                        |
-                          |                                   |
-         +----------------+----------------+                  |
-         |                                 |                  |
-+--------v---------+            +----------v--------+        |
-|  Legion "alpha"   |            |  Legion "beta"     |        |
-|  (Research Ops)   |            |  (Build Ops)       |        |
-+--------+---------+            +----------+---------+        |
-         |                                 |                  |
-    +----+--------+                   +----+----+             |
-    |             |                   |         |             |
-+---v----+  +----v---+          +----v---+ +---v----+        |
-|Century |  |Century |          |Century | |Century |        |
-|claude  |  |claude  |          |shell   | |claude  |        |
-|_cli x5 |  |_api x3 |          |  x10   | |_api x8 |        |
-+---+----+  +---+----+          +---+----+ +---+----+        |
-    |           |                   |          |              |
-  L L L L L  L L L              L L L L..  L L L L..         |
-  | | | | |  | | |              | | | |    | | | |           |
-  v v v v v  v v v              v v v v    v v v v           |
-  Legionaries (individual agent instances)     <-- events ---+
+                        +-----------------------+
+                        |      CENTURION        |
+                        |    Control Plane      |
+                        +----------+------------+
+                                   |
+            +----------------------+----------------------+
+            |                      |                      |
+   +--------v--------+   +--------v--------+   +---------v--------+
+   |    Scheduler     |   |   Broadcaster   |   |    EventBus      |
+   |  (K8s-inspired   |   |  (all/legion/   |   |   (Aquilifer)    |
+   |  admission ctrl) |   |  century scope) |   |  WebSocket pub-  |
+   +--------+---------+   +--------+--------+   |  sub events      |
+            |                      |             +---------+--------+
+            +----------------------+                       |
+                        |                                  |
+       +----------------+----------------+                 |
+       |                                 |                 |
++------v-----------+          +----------v--------+        |
+|  Legion "alpha"  |          |  Legion "beta"    |        |
+|  (Research Ops)  |          |  (Build Ops)      |        |
++------+-----------+          +----------+--------+        |
+       |                                 |                 |
+  +----+--------+                   +----+----+            |
+  |             |                   |         |            |
++-v------+ +---v-----+        +----v---+ +---v-----+      |
+|Century | |Century  |        |Century | |Century  |      |
+|claude  | |claude   |        |shell   | |claude   |      |
+|_cli x5 | |_api x3  |        |  x10   | |_api x8  |      |
++---+----+ +---+-----+        +---+----+ +---+-----+      |
+    |          |                   |          |             |
+  L L L L L  L L L             L L L L..  L L L L..        |
+  | | | | |  | | |             | | | |    | | | |          |
+  v v v v v  v v v             v v v v    v v v v          |
+  Legionaries (individual agent instances)    <-- events --+
 ```
 
 ### Why Centurion?
@@ -115,25 +119,24 @@ Centurion is an AI agent orchestration engine that manages fleets of AI agents a
 
 Centurion fills this permanent gap. It operates at the **infrastructure layer** (OS, RAM, CPU, process management), not the model layer. It probes your hardware, enforces admission control before every agent spawn, detects memory pressure in real time, and scales fleets up or down automatically. No other tool in the ecosystem does this.
 
-| Feature | CrewAI | AutoGen | LangGraph | Centurion |
-|---------|--------|---------|-----------|-----------|
-| Max practical agents | 2-5 | 2-10 | 2-5 | **100+** |
-| Hardware-aware scheduling | :x: | :x: | :x: | :white_check_mark: |
-| Auto-scaling (Optio) | :x: | :x: | :x: | :white_check_mark: |
-| Admission control (K8s-style) | :x: | :x: | :x: | :white_check_mark: |
-| Real-time event streaming | :x: | :x: | :x: | :white_check_mark: |
-| Fleet broadcasting | :x: | :x: | :x: | :white_check_mark: |
-| MCP server integration | :x: | :x: | :x: | :white_check_mark: |
-| Claude Code native | :x: | :x: | :x: | :white_check_mark: |
-| OpenClaw compatible | :x: | :x: | :x: | :white_check_mark: |
-| A2A protocol (Google) | :x: | :x: | :x: | :white_check_mark: |
-| REST API | :x: | :x: | partial | :white_check_mark: |
-| Circuit breaker / fault tolerance | :x: | :x: | :x: | :white_check_mark: |
-| Multiple agent types | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Python library mode | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Task queuing with priority | :x: | :x: | :x: | :white_check_mark: |
+| Feature | Raw Agentic Loop | Claude Code Subagents | Centurion |
+|---------|-------------------|----------------------|-----------|
+| Parallel agents | 1 | Unlimited (unmanaged) | **100+ (managed)** |
+| Memory pressure detection | :x: | :x: | :white_check_mark: |
+| Hardware-aware scheduling | :x: | :x: | :white_check_mark: |
+| Admission control (K8s-style) | :x: | :x: | :white_check_mark: |
+| Auto-scaling | :x: | :x: | :white_check_mark: (Optio) |
+| Task DAG orchestration | :x: | :x: | :white_check_mark: (Harness Loop) |
+| Cross-session coordination | :x: | :x: | :white_check_mark: |
+| Circuit breaker / fault tolerance | :x: | :x: | :white_check_mark: |
+| Real-time event streaming | :x: | :x: | :white_check_mark: |
+| Fleet broadcasting | :x: | :x: | :white_check_mark: |
+| MCP server integration | N/A | :x: | :white_check_mark: |
+| REST API | :x: | :x: | :white_check_mark: (21 endpoints) |
+| A2A protocol (Google) | :x: | :x: | :white_check_mark: |
+| Model-independent | :x: | :x: | :white_check_mark: |
 
-> **CrewAI / AutoGen / LangGraph** are excellent for workflows with 1-5 specialized agents in fixed roles. **Centurion** is built for when you need to scale -- 10, 50, or 100+ agents executing tasks in parallel with real-time fleet management. It is infrastructure-level and model-independent: the same scheduler works for Claude, GPT, Gemini, or shell scripts.
+> **The raw agentic loop** is fine for single tasks. **Claude Code subagents** add parallelism but with zero safety — no resource checks, no limits, no scheduling. Anthropic closed the `maxParallelAgents` feature request as [NOT_PLANNED](https://github.com/anthropics/claude-code/issues/15487). **Centurion** fills this permanent infrastructure gap. It is model-independent: the same scheduler works for Claude, GPT, Gemini, or shell scripts.
 
 ## Concepts
 
@@ -149,10 +152,10 @@ Centurion fills this permanent gap. It operates at the **infrastructure layer** 
 
 ## One-Click Quickstart
 
-The fastest way to get Centurion running. It automatically probes your hardware, recommends the optimal number of agents, and launches with a pre-configured fleet:
+The fastest way to get Centurion running. Installing Centurion automatically installs [Harness Loop](https://github.com/spacelobster88/harness-loop) as a bundled Claude Code skill for project-level task orchestration.
 
 ```bash
-# Install
+# Install (includes Harness Loop)
 pip install centurion
 
 # One-click launch (probes hardware, auto-configures, starts server)
