@@ -1,0 +1,16 @@
+# Default owner for everything
+* @spacelobster88
+
+# Security-sensitive paths — require owner review
+# Embedded system prompts and LLM instructions
+/centurion/skill.py @spacelobster88
+/centurion/agent_types/claude_api.py @spacelobster88
+
+# Configuration with environment variable access
+/centurion/config.py @spacelobster88
+
+# CI/CD pipeline definitions
+/.github/workflows/ @spacelobster88
+
+# Ownership rules themselves
+/.github/CODEOWNERS @spacelobster88

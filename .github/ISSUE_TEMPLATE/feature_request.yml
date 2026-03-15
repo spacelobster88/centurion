@@ -1,0 +1,61 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for Centurion
+title: "[FEATURE] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for suggesting an improvement! Please fill out the form below."
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Core Engine (Centurion)
+        - Scheduler
+        - Legion / Century / Legionary
+        - REST API
+        - MCP Tools
+        - WebSocket / Events (Aquilifer)
+        - Auto-scaler (Optio)
+        - Hardware Detection
+        - CLI / Quickstart
+        - Harness Loop Skill
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? Who is affected?
+      placeholder: "I'm frustrated when..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your ideal solution and how it would work.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What other approaches have you considered? Why were they insufficient?
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Willingness to Contribute
+      options:
+        - "Yes - I can submit a PR"
+        - "Partial - I can help with design or testing"
+        - "No - I'm requesting this feature only"
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or references.
