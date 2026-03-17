@@ -1,0 +1,212 @@
+name: Prompt Security Scan
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "centurion/skill.py"
+      - "centurion/agent_types/claude_api.py"
+      - "**/*prompt*"
+      - "**/*instruction*"
+      - "**/*system_prompt*"
+      - "docs/**/*.md"
+
+  pull_request_target:
+    types: [labeled]
+
+jobs:
+  static-scan:
+    name: Static Prompt Diff Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install PyYAML
+
+      - name: Run prompt diff scanner
+        id: scan
+        run: |
+          set +e
+          python scripts/check-prompt-diff.py > scan-results.json 2>&1
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: Post scan results as PR comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '## Prompt Security Scan Results\n\n';
+            try {
+              const raw = fs.readFileSync('scan-results.json', 'utf8');
+              const results = JSON.parse(raw);
+              if (results.findings && results.findings.length > 0) {
+                body += `**Status:** ${results.severity === 'high' ? '🚨 Issues Found' : '⚠️ Warnings'}\n\n`;
+                body += '| File | Pattern | Severity | Detail |\n';
+                body += '|------|---------|----------|--------|\n';
+                for (const f of results.findings) {
+                  body += `| \`${f.file}\` | ${f.pattern} | ${f.severity} | ${f.detail} |\n`;
+                }
+              } else {
+                body += '**Status:** ✅ No issues found\n';
+              }
+              if (results.stats) {
+                body += `\n**Files scanned:** ${results.stats.files_scanned} | **Lines changed:** ${results.stats.lines_changed}\n`;
+              }
+            } catch (e) {
+              const raw = fs.existsSync('scan-results.json')
+                ? fs.readFileSync('scan-results.json', 'utf8')
+                : 'No output captured';
+              body += '**Status:** ⚠️ Scanner produced non-JSON output\n\n```\n' + raw + '\n```\n';
+            }
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body,
+            });
+
+      - name: Fail on high-severity findings
+        if: steps.scan.outputs.exit_code == '1'
+        run: exit 1
+
+  bloom-petri-scan:
+    name: Deep Security Scan (Bloom + Petri)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request_target' && github.event.label.name == '/security-scan'
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install deep-scan dependencies
+        run: pip install bloom petri PyYAML
+
+      - name: Run deep security scan
+        id: deep-scan
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set +e
+          python -c "
+          import json, subprocess, sys
+          try:
+              from bloom import scanner as bloom_scanner
+              from petri import analyzer as petri_analyzer
+
+              result = subprocess.run(
+                  ['git', 'diff', 'origin/main...HEAD', '--name-only'],
+                  capture_output=True, text=True
+              )
+              changed_files = [f for f in result.stdout.strip().split('\n') if f]
+
+              findings = []
+              for f in changed_files:
+                  try:
+                      bloom_result = bloom_scanner.scan_file(f)
+                      if bloom_result and bloom_result.get('issues'):
+                          for issue in bloom_result['issues']:
+                              findings.append({
+                                  'file': f,
+                                  'tool': 'bloom',
+                                  'severity': issue.get('severity', 'medium'),
+                                  'detail': issue.get('description', 'N/A'),
+                              })
+                  except Exception as e:
+                      findings.append({'file': f, 'tool': 'bloom', 'severity': 'error', 'detail': str(e)})
+
+                  try:
+                      petri_result = petri_analyzer.analyze_file(f)
+                      if petri_result and petri_result.get('issues'):
+                          for issue in petri_result['issues']:
+                              findings.append({
+                                  'file': f,
+                                  'tool': 'petri',
+                                  'severity': issue.get('severity', 'medium'),
+                                  'detail': issue.get('description', 'N/A'),
+                              })
+                  except Exception as e:
+                      findings.append({'file': f, 'tool': 'petri', 'severity': 'error', 'detail': str(e)})
+
+              report = {'findings': findings, 'files_scanned': len(changed_files)}
+              print(json.dumps(report, indent=2))
+              sys.exit(1 if any(f['severity'] == 'high' for f in findings) else 0)
+          except ImportError as e:
+              print(json.dumps({'error': f'Import failed: {e}', 'findings': []}))
+              sys.exit(2)
+          " > deep-scan-results.json 2>&1
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: Post deep scan results as PR comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '## Deep Security Scan Results (Bloom + Petri)\n\n';
+            try {
+              const raw = fs.readFileSync('deep-scan-results.json', 'utf8');
+              const results = JSON.parse(raw);
+              if (results.error) {
+                body += `**Status:** ⚠️ Scanner error: ${results.error}\n`;
+              } else if (results.findings && results.findings.length > 0) {
+                body += '| File | Tool | Severity | Detail |\n';
+                body += '|------|------|----------|--------|\n';
+                for (const f of results.findings) {
+                  body += `| \`${f.file}\` | ${f.tool} | ${f.severity} | ${f.detail} |\n`;
+                }
+              } else {
+                body += '**Status:** ✅ No issues found\n';
+              }
+              body += `\n**Files scanned:** ${results.files_scanned || 'N/A'}\n`;
+            } catch (e) {
+              const raw = fs.existsSync('deep-scan-results.json')
+                ? fs.readFileSync('deep-scan-results.json', 'utf8')
+                : 'No output captured';
+              body += '**Status:** ⚠️ Scanner produced non-JSON output\n\n```\n' + raw + '\n```\n';
+            }
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body,
+            });
+
+      - name: Remove trigger label
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: '/security-scan',
+              });
+            } catch (e) {
+              // Label may already be removed
+            }
