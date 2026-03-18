@@ -467,35 +467,7 @@ Centurion reads configuration from environment variables with sensible defaults.
 | `CENTURION_TASK_TIMEOUT`      | `300`                      | Default task timeout in seconds                  |
 | `CENTURION_CLAUDE_BIN`        | `claude`                   | Path to the Claude CLI binary                    |
 | `CENTURION_CLAUDE_MODEL`      | `claude-sonnet-4-6`        | Default model for Claude API agent type          |
-| `CENTURION_AUTH_TOKEN`         | (none)                     | API authentication token (see [Authentication](#authentication)) |
 | `ANTHROPIC_API_KEY`           | (none)                     | Anthropic API key for `claude_api` agent type    |
-
-## Authentication
-
-By default, all Centurion endpoints are unauthenticated. To enable token-based authentication, set the `CENTURION_AUTH_TOKEN` environment variable:
-
-```bash
-export CENTURION_AUTH_TOKEN="your-secret-token-here"
-centurion up
-```
-
-When enabled, every request to a protected endpoint must include the `X-Centurion-Token` header:
-
-```bash
-# Authenticated request
-curl -H "X-Centurion-Token: your-secret-token-here" \
-     http://localhost:8100/api/centurion/status
-
-# Returns 401 without the header
-curl http://localhost:8100/api/centurion/status
-# {"detail": "Missing X-Centurion-Token header"}
-```
-
-**Public endpoints** (no token required):
-- `GET /health` — liveness probe
-- `GET /health/ready` — readiness probe
-
-All other endpoints (`/api/centurion/*`, `/a2a`, `/.well-known/agent.json`) require a valid token when `CENTURION_AUTH_TOKEN` is set.
 
 ## Success Stories
 
