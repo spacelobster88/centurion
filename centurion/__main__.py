@@ -203,10 +203,12 @@ async def _quickstart_bootstrap(
     min_agents = min(3, max_agents)
 
     legion = await engine.raise_legion("default", name="Default Legion")
+    task_timeout = float(os.getenv("CENTURION_TASK_TIMEOUT", "300"))
     century_config = CenturyConfig(
         agent_type_name=agent_type,
         min_legionaries=min_agents,
         max_legionaries=max_agents,
+        task_timeout=task_timeout,
     )
     await legion.add_century(
         None,
