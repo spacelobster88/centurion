@@ -8,6 +8,7 @@ import pytest
 from centurion.agent_types.base import AgentResult
 from centurion.core.exceptions import AgentProcessError, TaskTimeoutError
 from centurion.core.legionary import Legionary, LegionaryStatus, MAX_CONSECUTIVE_FAILURES
+from centurion.core.session_registry import SessionRegistry
 
 
 async def test_create_legionary(mock_agent_type):
@@ -179,3 +180,38 @@ async def test_legionary_failed_status_on_non_retryable_error(mock_agent_type):
     assert leg.status == LegionaryStatus.FAILED
     assert leg.tasks_failed == 1
     assert leg.consecutive_failures == 1
+
+
+# ---------------------------------------------------------------------------
+# to_dict with session_registry
+# ---------------------------------------------------------------------------
+
+class TestToDictCloseableFields:
+    def test_to_dict_without_registry(self, mock_agent_type):
+        """Without a registry, to_dict should NOT include closeable fields."""
+        leg = Legionary(agent_type=mock_agent_type, century_id="cent-test")
+        d = leg.to_dict()
+        assert "has_bg_children" not in d
+        assert "bg_child_ids" not in d
+        assert "closeable" not in d
+
+    def test_to_dict_with_registry_no_children(self, mock_agent_type):
+        """With a registry and no children, closeable fields should be present."""
+        reg = SessionRegistry()
+        reg.register_session("leg-1", parent_id=None, session_type="interactive")
+        leg = Legionary(id="leg-1", agent_type=mock_agent_type, century_id="cent-test")
+        d = leg.to_dict(session_registry=reg)
+        assert d["has_bg_children"] is False
+        assert d["bg_child_ids"] == []
+        assert d["closeable"] is True
+
+    def test_to_dict_with_registry_active_children(self, mock_agent_type):
+        """With active background children, closeable should be False."""
+        reg = SessionRegistry()
+        reg.register_session("leg-p", parent_id=None, session_type="interactive")
+        reg.register_session("leg-c", parent_id="leg-p", session_type="background")
+        leg = Legionary(id="leg-p", agent_type=mock_agent_type, century_id="cent-test")
+        d = leg.to_dict(session_registry=reg)
+        assert d["has_bg_children"] is True
+        assert d["bg_child_ids"] == ["leg-c"]
+        assert d["closeable"] is False

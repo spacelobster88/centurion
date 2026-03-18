@@ -29,6 +29,7 @@ dependencies = [
     "aiosqlite>=0.20.0",
     "httpx>=0.28.0",
     "mcp[cli]>=1.0.0",
+    "psutil>=6.0.0",
 ]
 
 [project.optional-dependencies]

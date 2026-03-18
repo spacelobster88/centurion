@@ -147,8 +147,8 @@ class Legionary:
             extra={"legionary_id": self.id, "message_len": len(message)},
         )
 
-    def to_dict(self) -> dict:
-        return {
+    def to_dict(self, session_registry: Any | None = None) -> dict:
+        result = {
             "id": self.id,
             "century_id": self.century_id,
             "agent_type": self.agent_type.name if self.agent_type else None,
@@ -161,3 +161,9 @@ class Legionary:
             "total_duration": round(self.total_duration, 2),
             "consecutive_failures": self.consecutive_failures,
         }
+        if session_registry is not None:
+            info = session_registry.closeable_info(self.id)
+            result["has_bg_children"] = info["has_bg_children"]
+            result["bg_child_ids"] = info["bg_child_ids"]
+            result["closeable"] = info["closeable"]
+        return result

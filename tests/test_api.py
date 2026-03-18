@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 
 import pytest
 from fastapi import FastAPI
@@ -12,6 +13,7 @@ from centurion.api.router import router
 from centurion.api.websocket import websocket_endpoint
 from centurion.config import CenturionConfig
 from centurion.core.engine import Centurion
+from centurion.core.session_registry import SessionRegistry
 from tests.conftest import MockAgentType
 
 
@@ -432,3 +434,191 @@ async def test_full_lifecycle(client):
     # Verify gone
     resp = await client.get("/api/centurion/status")
     assert resp.json()["total_legions"] == 0
+
+
+# =========================================================================
+# Closeable Sessions
+# =========================================================================
+
+
+@pytest.mark.asyncio
+async def test_closeable_sessions_empty_no_registry(client):
+    """When engine has no session_registry, return empty list gracefully."""
+    resp = await client.get("/api/centurion/closeable-sessions")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["sessions"] == []
+    assert data["total"] == 0
+
+
+@pytest.mark.asyncio
+async def test_closeable_sessions_empty_registry():
+    """When registry exists but has no sessions, return empty list."""
+    app, engine = _make_app_with_engine()
+    engine.session_registry = SessionRegistry()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.get("/api/centurion/closeable-sessions")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["sessions"] == []
+    assert data["total"] == 0
+    await engine.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_closeable_sessions_returns_closeable_only():
+    """Only sessions where closeable=True should appear."""
+    app, engine = _make_app_with_engine()
+    registry = SessionRegistry()
+    engine.session_registry = registry
+
+    # Register a closeable session (no children, not pinned)
+    registry.register_session("sess-1", parent_id=None, session_type="interactive")
+    # Make it idle for a bit by backdating last_active
+    registry.session_meta["sess-1"].last_active = time.time() - 120.0
+
+    # Register a non-closeable session (pinned)
+    registry.register_session("sess-2", parent_id=None, session_type="interactive", pinned=True)
+
+    # Register a parent with active background child (not closeable)
+    registry.register_session("sess-3", parent_id=None, session_type="interactive")
+    registry.register_session("sess-3-child", parent_id="sess-3", session_type="background")
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.get("/api/centurion/closeable-sessions")
+    assert resp.status_code == 200
+    data = resp.json()
+
+    session_ids = [s["session_id"] for s in data["sessions"]]
+    assert "sess-1" in session_ids
+    assert "sess-2" not in session_ids  # pinned
+    assert "sess-3" not in session_ids  # has active bg child
+    # sess-3-child has no children of its own and is not pinned -> closeable
+    assert "sess-3-child" in session_ids
+    assert data["total"] == len(data["sessions"])
+    await engine.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_closeable_sessions_sorted_by_idle_desc():
+    """Sessions should be sorted by idle_seconds descending (most idle first)."""
+    app, engine = _make_app_with_engine()
+    registry = SessionRegistry()
+    engine.session_registry = registry
+
+    now = time.time()
+    registry.register_session("recent", parent_id=None, session_type="interactive")
+    registry.session_meta["recent"].last_active = now - 30.0
+
+    registry.register_session("old", parent_id=None, session_type="interactive")
+    registry.session_meta["old"].last_active = now - 300.0
+
+    registry.register_session("medium", parent_id=None, session_type="interactive")
+    registry.session_meta["medium"].last_active = now - 120.0
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.get("/api/centurion/closeable-sessions")
+    assert resp.status_code == 200
+    data = resp.json()
+
+    ids = [s["session_id"] for s in data["sessions"]]
+    assert ids == ["old", "medium", "recent"]
+    await engine.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_closeable_sessions_has_required_fields():
+    """Each entry must have session_id, idle_seconds, reason, session_type."""
+    app, engine = _make_app_with_engine()
+    registry = SessionRegistry()
+    engine.session_registry = registry
+    registry.register_session("s1", parent_id=None, session_type="background")
+    registry.session_meta["s1"].last_active = time.time() - 60.0
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.get("/api/centurion/closeable-sessions")
+    assert resp.status_code == 200
+    entry = resp.json()["sessions"][0]
+    assert "session_id" in entry
+    assert "idle_seconds" in entry
+    assert "reason" in entry
+    assert "session_type" in entry
+    assert entry["session_id"] == "s1"
+    assert entry["session_type"] == "background"
+    assert entry["idle_seconds"] >= 59.0  # at least ~60s
+    await engine.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_closeable_sessions_all_non_closeable():
+    """When every session is pinned or has bg children, return empty list."""
+    app, engine = _make_app_with_engine()
+    registry = SessionRegistry()
+    engine.session_registry = registry
+
+    # Pinned session
+    registry.register_session("pinned", parent_id=None, session_type="interactive", pinned=True)
+    # Session with active bg child
+    registry.register_session("parent", parent_id=None, session_type="interactive")
+    registry.register_session("child", parent_id="parent", session_type="background")
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.get("/api/centurion/closeable-sessions")
+    assert resp.status_code == 200
+    data = resp.json()
+    # Only the child itself is closeable (no children of its own, not pinned)
+    session_ids = [s["session_id"] for s in data["sessions"]]
+    assert "pinned" not in session_ids
+    assert "parent" not in session_ids
+    assert "child" in session_ids
+    await engine.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_closeable_sessions_excludes_terminated():
+    """Terminated sessions should still appear if closeable (they have metadata)."""
+    app, engine = _make_app_with_engine()
+    registry = SessionRegistry()
+    engine.session_registry = registry
+
+    registry.register_session("alive", parent_id=None, session_type="interactive")
+    registry.session_meta["alive"].last_active = time.time() - 60.0
+    registry.register_session("dead", parent_id=None, session_type="interactive")
+    registry.session_meta["dead"].last_active = time.time() - 200.0
+    registry.terminate_session("dead")
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.get("/api/centurion/closeable-sessions")
+    assert resp.status_code == 200
+    data = resp.json()
+    session_ids = [s["session_id"] for s in data["sessions"]]
+    # Both appear since closeable_info considers both closeable
+    assert "alive" in session_ids
+    assert "dead" in session_ids
+    await engine.shutdown()
+
+
+@pytest.mark.asyncio
+async def test_closeable_sessions_idle_seconds_accuracy():
+    """idle_seconds should closely match actual idle time."""
+    app, engine = _make_app_with_engine()
+    registry = SessionRegistry()
+    engine.session_registry = registry
+
+    now = time.time()
+    registry.register_session("s1", parent_id=None, session_type="interactive")
+    registry.session_meta["s1"].last_active = now - 500.0
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.get("/api/centurion/closeable-sessions")
+    data = resp.json()
+    entry = data["sessions"][0]
+    assert 499.0 <= entry["idle_seconds"] <= 510.0
+    await engine.shutdown()

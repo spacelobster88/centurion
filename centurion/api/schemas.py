@@ -155,9 +155,31 @@ class ComponentStatus(BaseModel):
     history_size: int | None = None
     legions: int | None = None
     shutting_down: bool | None = None
+    # RAM / memory pressure fields (scheduler component)
+    ram_available_conservative_mb: int | None = None
+    ram_compressor_mb: int | None = None
+    memory_pressure: str | None = None
 
 
 class ReadinessResponse(BaseModel):
     """Readiness probe response."""
     status: Literal["ready", "not_ready"]
     components: dict[str, ComponentStatus]
+
+
+# ---------------------------------------------------------------------------
+# Closeable sessions
+# ---------------------------------------------------------------------------
+
+class CloseableSessionEntry(BaseModel):
+    """A single session that is safe to close."""
+    session_id: str
+    idle_seconds: float
+    reason: str
+    session_type: str
+
+
+class CloseableSessionsResponse(BaseModel):
+    """Response for the closeable-sessions endpoint."""
+    sessions: list[CloseableSessionEntry]
+    total: int

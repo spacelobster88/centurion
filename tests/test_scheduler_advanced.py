@@ -240,6 +240,8 @@ class TestToDict:
             "cpu_count",
             "ram_total_mb",
             "ram_available_mb",
+            "ram_available_conservative_mb",
+            "ram_compressor_mb",
             "load_avg",
             "platform",
             "memory_pressure",

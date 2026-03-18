@@ -10,6 +10,8 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 
+import psutil
+
 from centurion.agent_types.base import AgentType
 from centurion.config import CenturionConfig, ResourceSpec
 
@@ -21,10 +23,40 @@ class MemoryPressureLevel(Enum):
 
     Thresholds are evaluated against the ratio:
         actual_rss / (ram_available_mb - dynamic_headroom)
+
+    Ordering: NORMAL < WARN < CRITICAL so max() picks the worse signal.
     """
     NORMAL   = "normal"    # ratio < 0.6 — no action needed
     WARN     = "warn"      # 0.6 <= ratio < 0.85 — slow down spawning
     CRITICAL = "critical"  # ratio >= 0.85 — halt spawning, begin scale-down
+
+    def __lt__(self, other: MemoryPressureLevel) -> bool:
+        if not isinstance(other, MemoryPressureLevel):
+            return NotImplemented
+        return _PRESSURE_ORDER[self] < _PRESSURE_ORDER[other]
+
+    def __le__(self, other: MemoryPressureLevel) -> bool:
+        if not isinstance(other, MemoryPressureLevel):
+            return NotImplemented
+        return _PRESSURE_ORDER[self] <= _PRESSURE_ORDER[other]
+
+    def __gt__(self, other: MemoryPressureLevel) -> bool:
+        if not isinstance(other, MemoryPressureLevel):
+            return NotImplemented
+        return _PRESSURE_ORDER[self] > _PRESSURE_ORDER[other]
+
+    def __ge__(self, other: MemoryPressureLevel) -> bool:
+        if not isinstance(other, MemoryPressureLevel):
+            return NotImplemented
+        return _PRESSURE_ORDER[self] >= _PRESSURE_ORDER[other]
+
+
+# Numeric ordering for MemoryPressureLevel comparisons.
+_PRESSURE_ORDER: dict[MemoryPressureLevel, int] = {
+    MemoryPressureLevel.NORMAL: 0,
+    MemoryPressureLevel.WARN: 1,
+    MemoryPressureLevel.CRITICAL: 2,
+}
 
 
 @dataclass
@@ -34,6 +66,8 @@ class SystemResources:
     cpu_count: int = 0
     ram_total_mb: int = 0
     ram_available_mb: int = 0
+    ram_available_conservative_mb: int = 0
+    ram_compressor_mb: int = 0
     load_avg_1: float = 0.0
     load_avg_5: float = 0.0
     load_avg_15: float = 0.0
@@ -72,21 +106,26 @@ class CenturionScheduler:
         cpu_count = os.cpu_count() or 1
         ram_total_mb = self._ram_total_mb()
         ram_available_mb = self._ram_available_mb()
+        ram_compressor_mb = self._ram_compressor_mb()
+        ram_available_conservative_mb = max(0, ram_available_mb - ram_compressor_mb)
         load_1, load_5, load_15 = os.getloadavg()
         pressure = self._memory_pressure_level()
         resources = SystemResources(
             cpu_count=cpu_count,
             ram_total_mb=ram_total_mb,
             ram_available_mb=ram_available_mb,
+            ram_available_conservative_mb=ram_available_conservative_mb,
+            ram_compressor_mb=ram_compressor_mb,
             load_avg_1=round(load_1, 2),
             load_avg_5=round(load_5, 2),
             load_avg_15=round(load_15, 2),
             memory_pressure=pressure,
         )
         logger.debug(
-            "probe_system: system resources snapshot cpu_count=%d ram_total_mb=%d "
-            "ram_available_mb=%d load_avg=%.2f/%.2f/%.2f",
-            resources.cpu_count, resources.ram_total_mb, resources.ram_available_mb,
+            "probe_system: ram_total=%d ram_available=%d ram_conservative=%d "
+            "ram_compressor=%d pressure=%s load_avg=%.2f/%.2f/%.2f",
+            ram_total_mb, ram_available_mb, ram_available_conservative_mb,
+            ram_compressor_mb, pressure.value,
             resources.load_avg_1, resources.load_avg_5, resources.load_avg_15,
         )
         self._probe_cache = resources
@@ -177,6 +216,8 @@ class CenturionScheduler:
                 "cpu_count": system.cpu_count,
                 "ram_total_mb": system.ram_total_mb,
                 "ram_available_mb": system.ram_available_mb,
+                "ram_available_conservative_mb": system.ram_available_conservative_mb,
+                "ram_compressor_mb": system.ram_compressor_mb,
                 "load_avg": [system.load_avg_1, system.load_avg_5, system.load_avg_15],
                 "platform": platform.system(),
                 "memory_pressure": system.memory_pressure.value,
@@ -290,14 +331,22 @@ class CenturionScheduler:
 
     @staticmethod
     def _memory_pressure_level() -> MemoryPressureLevel:
-        """Query macOS memory pressure via sysctl kern.memorystatus_level.
+        """Determine memory pressure from kernel signal AND compressor ratio.
 
-        Returns MemoryPressureLevel based on the kernel-reported level:
-          4 = NORMAL, 2 = WARN, 1 = CRITICAL.
+        On macOS, combines two signals:
+        1. kern.memorystatus_level (existing kernel-level signal)
+           4 = NORMAL, 2 = WARN, 1 = CRITICAL.
+        2. Compressor ratio: compressor_mb / ram_total_mb
+           > 50% -> CRITICAL, > 30% -> WARN, else NORMAL.
+
+        The worse of the two signals wins (via max).
         Falls back to NORMAL on non-Darwin platforms or any error.
         """
         if platform.system() != "Darwin":
             return MemoryPressureLevel.NORMAL
+
+        # Signal 1: kernel memorystatus level
+        kernel_level = MemoryPressureLevel.NORMAL
         try:
             out = subprocess.run(
                 ["/usr/sbin/sysctl", "-n", "kern.memorystatus_level"],
@@ -305,59 +354,58 @@ class CenturionScheduler:
             ).stdout.strip()
             level = int(out)
             if level <= 1:
-                return MemoryPressureLevel.CRITICAL
+                kernel_level = MemoryPressureLevel.CRITICAL
             elif level <= 2:
-                return MemoryPressureLevel.WARN
-            else:
-                return MemoryPressureLevel.NORMAL
+                kernel_level = MemoryPressureLevel.WARN
         except Exception:
-            return MemoryPressureLevel.NORMAL
+            pass  # kernel_level stays NORMAL
+
+        # Signal 2: compressor ratio
+        compressor_level = MemoryPressureLevel.NORMAL
+        total_mb = CenturionScheduler._ram_total_mb()
+        if total_mb > 0:
+            compressor_mb = CenturionScheduler._ram_compressor_mb()
+            compressor_ratio = compressor_mb / total_mb
+            if compressor_ratio > 0.50:
+                compressor_level = MemoryPressureLevel.CRITICAL
+            elif compressor_ratio > 0.30:
+                compressor_level = MemoryPressureLevel.WARN
+
+        # Return the worse of the two signals
+        return max(kernel_level, compressor_level)
 
     @staticmethod
     def _ram_total_mb() -> int:
-        if platform.system() == "Darwin":
-            try:
-                out = subprocess.run(
-                    ["/usr/sbin/sysctl", "-n", "hw.memsize"],
-                    capture_output=True, text=True, timeout=5,
-                ).stdout.strip()
-                return int(out) // (1024 * 1024)
-            except Exception:
-                return 8192  # fallback 8GB
-        else:
-            try:
-                page_size = os.sysconf("SC_PAGE_SIZE")
-                pages = os.sysconf("SC_PHYS_PAGES")
-                return (page_size * pages) // (1024 * 1024)
-            except Exception:
-                return 8192
+        """Total physical RAM in MB via psutil (cross-platform)."""
+        try:
+            return psutil.virtual_memory().total // (1024 * 1024)
+        except Exception:
+            return 8192  # fallback 8GB
 
     @staticmethod
     def _ram_available_mb() -> int:
-        if platform.system() == "Darwin":
-            try:
-                out = subprocess.run(
-                    ["vm_stat"], capture_output=True, text=True, timeout=5,
-                ).stdout
-                free = spec = inactive = purgeable = 0
-                for line in out.splitlines():
-                    low = line.lower()
-                    if "free" in low:
-                        free = int("".join(c for c in line.split(":")[-1] if c.isdigit()))
-                    elif "speculative" in low:
-                        spec = int("".join(c for c in line.split(":")[-1] if c.isdigit()))
-                    elif "inactive" in low:
-                        inactive = int("".join(c for c in line.split(":")[-1] if c.isdigit()))
-                    elif "purgeable" in low:
-                        purgeable = int("".join(c for c in line.split(":")[-1] if c.isdigit()))
-                page_size = 16384  # Apple Silicon default
-                return ((free + spec + inactive + purgeable) * page_size) // (1024 * 1024)
-            except Exception:
-                return 4096  # fallback 4GB
-        else:
-            try:
-                pages = os.sysconf("SC_AVPHYS_PAGES")
-                page_size = os.sysconf("SC_PAGE_SIZE")
-                return (page_size * pages) // (1024 * 1024)
-            except Exception:
-                return 4096
+        """Available RAM in MB via psutil (cross-platform)."""
+        try:
+            return psutil.virtual_memory().available // (1024 * 1024)
+        except Exception:
+            return 4096  # fallback 4GB
+
+    @staticmethod
+    def _ram_compressor_mb() -> int:
+        """macOS memory compressor size in MB. Returns 0 on non-Darwin or error."""
+        if platform.system() != "Darwin":
+            return 0
+        try:
+            out = subprocess.run(
+                ["/usr/sbin/sysctl", "-n", "vm.compressor_bytes_used"],
+                capture_output=True, text=True, timeout=5,
+            ).stdout.strip()
+            return int(out) // (1024 * 1024)
+        except Exception:
+            return 0
+
+    def _ram_available_conservative_mb(self) -> int:
+        """Available RAM minus compressor overhead. Used for scheduling decisions."""
+        available = self._ram_available_mb()
+        compressor = self._ram_compressor_mb()
+        return max(0, available - compressor)

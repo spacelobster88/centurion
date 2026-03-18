@@ -15,6 +15,8 @@ from centurion.api.schemas import (
     AddCenturyRequest,
     BroadcastRequest,
     BroadcastResponse,
+    CloseableSessionEntry,
+    CloseableSessionsResponse,
     ComponentStatus,
     CenturyResponse,
     FleetStatusResponse,
@@ -32,9 +34,57 @@ from centurion.core.century import CenturyConfig
 from centurion.core.engine import Centurion
 from centurion.core.legion import LegionQuota
 
+from centurion.core.session_registry import SessionRegistry
+
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/centurion", tags=["centurion"])
 health_router = APIRouter(tags=["health"])
+
+
+def _build_recommended_actions(
+    pressure,
+    *,
+    session_registry: SessionRegistry | None = None,
+    scheduler: Any | None = None,
+) -> list[str]:
+    """Build a list of recommended action strings based on memory pressure.
+
+    Returns an empty list when pressure is NORMAL.
+    Returns session-close suggestions and operational hints at WARN/CRITICAL.
+    """
+    from centurion.core.scheduler import MemoryPressureLevel
+
+    if pressure == MemoryPressureLevel.NORMAL:
+        return []
+
+    actions: list[str] = []
+
+    # Suggest closing idle sessions that are closeable.
+    if session_registry is not None:
+        now = time.time()
+        all_sessions = session_registry.get_all_sessions()
+        for session_id, meta in all_sessions.items():
+            info = session_registry.closeable_info(session_id)
+            if not info["closeable"]:
+                continue
+            idle_seconds = int(now - meta.last_active)
+            actions.append(
+                f"Close idle session {session_id} "
+                f"(idle {idle_seconds}s, no bg children)"
+            )
+
+    # Batch size reduction.
+    if pressure == MemoryPressureLevel.CRITICAL:
+        actions.append("Reduce batch size to 1")
+    else:
+        actions.append("Reduce batch size")
+
+    # Critical-only actions.
+    if pressure == MemoryPressureLevel.CRITICAL:
+        actions.append("Run 'sudo purge' to reclaim memory")
+        actions.append("Consider stopping non-essential background tasks")
+
+    return actions
 
 
 # =========================================================================
@@ -83,11 +133,14 @@ async def readiness(request: Request) -> JSONResponse:
         )
     else:
         try:
-            scheduler.probe_system()
+            system = scheduler.probe_system()
             components["scheduler"] = ComponentStatus(
                 status="ok",
                 active_agents=scheduler.active_agents,
                 recommended_max=scheduler.recommended_max_agents(),
+                ram_available_conservative_mb=system.ram_available_conservative_mb,
+                ram_compressor_mb=system.ram_compressor_mb,
+                memory_pressure=system.memory_pressure.value,
             )
         except Exception as exc:
             components["scheduler"] = ComponentStatus(
@@ -163,7 +216,23 @@ async def fleet_status(request: Request) -> dict[str, Any]:
 async def hardware_status(request: Request) -> dict[str, Any]:
     """Return hardware resources and scheduling state."""
     engine = _engine(request)
-    return engine.hardware_report()
+    report = engine.hardware_report()
+
+    # Determine memory pressure from the report.
+    from centurion.core.scheduler import MemoryPressureLevel
+    pressure_str = report.get("system", {}).get("memory_pressure", "normal")
+    try:
+        pressure = MemoryPressureLevel(pressure_str)
+    except ValueError:
+        pressure = MemoryPressureLevel.NORMAL
+
+    registry = getattr(engine, "session_registry", None)
+    scheduler = getattr(engine, "scheduler", None)
+
+    report["recommended_actions"] = _build_recommended_actions(
+        pressure, session_registry=registry, scheduler=scheduler,
+    )
+    return report
 
 
 # =========================================================================
@@ -513,6 +582,47 @@ async def broadcast_to_fleet(
         wait=False,
     )
     return result.to_dict()
+
+
+# =========================================================================
+# Closeable Sessions
+# =========================================================================
+
+@router.get(
+    "/closeable-sessions",
+    response_model=CloseableSessionsResponse,
+)
+async def closeable_sessions(request: Request) -> CloseableSessionsResponse:
+    """Return sessions that are safe to close, sorted by idle_seconds descending."""
+    engine = _engine(request)
+    registry = getattr(engine, "session_registry", None)
+
+    if registry is None:
+        return CloseableSessionsResponse(sessions=[], total=0)
+
+    now = time.time()
+    entries: list[CloseableSessionEntry] = []
+
+    all_sessions = registry.get_all_sessions()
+    for session_id, meta in all_sessions.items():
+        info = registry.closeable_info(session_id)
+        if not info["closeable"]:
+            continue
+
+        idle_seconds = now - meta.last_active
+        entries.append(
+            CloseableSessionEntry(
+                session_id=session_id,
+                idle_seconds=round(idle_seconds, 1),
+                reason=info["reason"],
+                session_type=meta.session_type,
+            )
+        )
+
+    # Sort by idle_seconds descending (most idle first).
+    entries.sort(key=lambda e: e.idle_seconds, reverse=True)
+
+    return CloseableSessionsResponse(sessions=entries, total=len(entries))
 
 
 # =========================================================================
