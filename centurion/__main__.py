@@ -38,6 +38,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from centurion.a2a.router import a2a_router
+from centurion.api.auth import TokenAuthMiddleware
 from centurion.api.router import health_router, router
 from centurion.api.websocket import websocket_endpoint
 from centurion.config import CenturionConfig
@@ -334,6 +335,7 @@ def cmd_quickstart(args: argparse.Namespace) -> None:
         version="0.1.0",
         lifespan=_make_quickstart_lifespan(agent_type, rec),
     )
+    app.add_middleware(TokenAuthMiddleware)
     app.include_router(health_router)
     app.include_router(router)
     app.include_router(a2a_router)
@@ -394,6 +396,7 @@ def cmd_up(args: argparse.Namespace) -> None:
         os.environ["CENTURION_MAX_AGENTS"] = str(args.max_agents)
 
     app = FastAPI(title="Centurion", version="0.1.0", lifespan=lifespan)
+    app.add_middleware(TokenAuthMiddleware)
     app.include_router(health_router)
     app.include_router(router)
     app.include_router(a2a_router)
