@@ -11,3 +11,6 @@ build/
 
 # Harness loop state
 .harness/
+.coverage
+=6.0.0
+uv.lock
