@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Centurion — AI Gateway</title>
+  <title>Centurion — Hardware Awareness Service for Agents</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -835,7 +835,7 @@
           </div>
           <div class="metric-divider"></div>
           <div class="metric">
-            <div class="metric-value">K8s</div>
+            <div class="metric-value">HW-Aware</div>
             <div class="metric-label">Scheduling</div>
           </div>
           <div class="metric-divider"></div>
@@ -887,11 +887,11 @@
           <div class="card" style="margin-bottom: 0; border-color: var(--color-accent);">
             <div class="card-label" style="color: var(--color-accent);">Layer 3 &mdash; Centurion</div>
             <div class="card-title">Managed Fleet Orchestration</div>
-            <p class="card-description">Hardware-aware scheduling, K8s-style admission control, DAG-based task decomposition, real-time event streaming, and auto-scaling. Safe, structured parallel execution at machine scale.</p>
+            <p class="card-description">Hardware-aware scheduling, admission control with memory-pressure detection, DAG-based task decomposition, real-time event streaming, and auto-scaling. Safe, structured parallel execution at machine scale.</p>
             <div class="card-metrics">
               <div>
                 <div class="card-metric-label">Scheduler</div>
-                <div class="card-metric-value">K8s-style</div>
+                <div class="card-metric-value">HW-aware</div>
               </div>
               <div>
                 <div class="card-metric-label">Broadcasting</div>
@@ -906,15 +906,60 @@
         </div>
       </div>
 
-      <!-- Harness Loop Flow Diagram -->
+      <!-- Architecture Diagram (ASCII) -->
       <div class="container section">
         <div class="section-header">
-          <div class="text-label">The Execute Loop</div>
-          <h2 class="text-section-heading">From task DAG to completion</h2>
+          <div class="text-label">Architecture</div>
+          <h2 class="text-section-heading">How Centurion works</h2>
         </div>
-        <p class="text-body" style="margin-bottom: var(--space-6);">Centurion's harness loop is the core execution engine. It takes a DAG of tasks, schedules them through admission control, assigns each to an agent, and drives them to completion with real-time health checks, retry logic, and result aggregation. The activity diagram below shows the full lifecycle from task submission through final rollup.</p>
-        <div style="border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; background-color: var(--color-bg-surface);">
-          <img src="images/harness-flow.svg" alt="Centurion harness loop flow diagram showing the full execution lifecycle from task DAG scheduling through agent assignment, health monitoring, and result aggregation" style="max-width: 100%; height: auto; display: block;">
+        <p class="text-body" style="margin-bottom: var(--space-6);">Centurion sits between your orchestrator and the agents it spawns. Every agent spawn request passes through hardware-aware admission control &mdash; checking RAM, CPU, and memory pressure before allowing execution. The diagram below shows the full request flow.</p>
+        <div style="border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; background-color: var(--color-bg-surface); padding: var(--space-6); overflow-x: auto;">
+          <pre style="font-family: var(--font-mono); font-size: var(--text-sm); line-height: 1.4; color: var(--color-text-primary); margin: 0; white-space: pre; text-align: center;"><code>
+  ┌─────────────────────────────────────────────────────────────┐
+  │                     <span style="color: var(--color-text-muted);">Orchestrators</span>                        │
+  │                                                             │
+  │   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌────────┐ │
+  │   │ Claude   │   │ Telegram │   │  REST    │   │  CLI   │ │
+  │   │ Code     │   │ Bot      │   │  API     │   │ Pipe   │ │
+  │   └────┬─────┘   └────┬─────┘   └────┬─────┘   └───┬────┘ │
+  └────────┼──────────────┼──────────────┼─────────────┼───────┘
+           │              │              │             │
+           └──────────────┴──────┬───────┴─────────────┘
+                                 │
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │                <span style="color: var(--color-accent);">Centurion  (localhost:8100)</span>                 │
+  │                                                             │
+  │   ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  │
+  │   │   <span style="color: var(--color-accent);">Hardware</span>    │  │  <span style="color: var(--color-accent);">Admission</span>   │  │   <span style="color: var(--color-accent);">Memory</span>     │  │
+  │   │   <span style="color: var(--color-accent);">Monitor</span>     │  │  <span style="color: var(--color-accent);">Control</span>    │  │   <span style="color: var(--color-accent);">Pressure</span>   │  │
+  │   │               │  │               │  │   <span style="color: var(--color-accent);">Detector</span>   │  │
+  │   │  CPU  RAM     │─▶│  Can this     │─▶│               │  │
+  │   │  Thermal      │  │  agent run?   │  │  normal/warn/ │  │
+  │   │  Disk         │  │  yes → spawn  │  │  critical     │  │
+  │   │               │  │  no  → queue  │  │  → throttle   │  │
+  │   └───────────────┘  └───────┬───────┘  └───────────────┘  │
+  │                              │                              │
+  │   ┌───────────────┐  ┌──────┴────────┐  ┌───────────────┐  │
+  │   │   <span style="color: var(--color-accent);">Auto-Scale</span>  │  │  <span style="color: var(--color-accent);">Agent Pool</span>   │  │  <span style="color: var(--color-accent);">Event</span>       │  │
+  │   │   <span style="color: var(--color-accent);">(Optio)</span>     │  │               │  │  <span style="color: var(--color-accent);">Stream</span>      │  │
+  │   │               │  │  max_agents:  │  │               │  │
+  │   │  Scale up/    │◀─│  auto from    │─▶│  WebSocket    │  │
+  │   │  down based   │  │  hardware     │  │  real-time    │  │
+  │   │  on demand    │  │  probing      │  │  status       │  │
+  │   └───────────────┘  └───────┬───────┘  └───────────────┘  │
+  └──────────────────────────────┼──────────────────────────────┘
+                                 │
+                                 ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │                      <span style="color: var(--color-success);">Agent Fleet</span>                          │
+  │                                                             │
+  │   ┌──────────┐   ┌──────────┐   ┌──────────┐              │
+  │   │ Agent 1  │   │ Agent 2  │   │ Agent N  │    ...       │
+  │   │ (claude) │   │ (claude) │   │ (shell)  │              │
+  │   └──────────┘   └──────────┘   └──────────┘              │
+  └─────────────────────────────────────────────────────────────┘
+</code></pre>
         </div>
       </div>
 
@@ -976,7 +1021,7 @@
             </div>
             <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">OpenClaw Bug Fixes</h3>
             <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
-              An open-source Rust project had a backlog of bugs. Centurion's harness loop decomposed them into a task DAG with parallel engineering tasks, each gated by QA. Progressive ramp-up scaled from 1 to 4 agents safely.
+              An open-source Rust project had a backlog of bugs. Centurion decomposed them into a task DAG with parallel engineering tasks, each gated by QA. Progressive ramp-up scaled from 1 to 4 agents safely.
             </p>
             <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
               <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">8</span>
@@ -1062,7 +1107,7 @@
             </div>
             <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">20-Agent Parallel Research Fleet</h3>
             <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
-              Market research across 20+ distinct segments on a single Mac Mini. Centurion's K8s-inspired scheduler handled admission control, preventing resource exhaustion while maximizing throughput.
+              Market research across 20+ distinct segments on a single Mac Mini. Centurion's hardware-aware scheduler handled admission control, preventing resource exhaustion while maximizing throughput.
             </p>
             <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
               <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">20+</span>
@@ -1071,7 +1116,7 @@
             <div class="card-metrics">
               <div>
                 <div class="card-metric-label">Scheduling</div>
-                <div class="card-metric-value">K8s-inspired</div>
+                <div class="card-metric-value">HW-aware</div>
               </div>
               <div>
                 <div class="card-metric-label">Autoscaler</div>
@@ -1090,7 +1135,7 @@
           <div class="card" style="border-left: 2px solid var(--color-accent);">
             <p class="card-label">What Centurion Did</p>
             <p class="card-description" style="line-height: var(--leading-normal);">
-              K8s-inspired resource scheduler controlled agent admission. Optio autoscaler monitored queue depth every 10 seconds, scaling up/down as tasks completed. Progressive ramp-up reached hardware-determined maximum within minutes. EventBus (Aquilifer) streamed real-time status via WebSocket. Memory pressure detection prevented overload &mdash; auto-paused launches when utilization rose, resumed when resources freed.
+              Hardware-aware resource scheduler controlled agent admission. Optio autoscaler monitored queue depth every 10 seconds, scaling up/down as tasks completed. Progressive ramp-up reached hardware-determined maximum within minutes. EventBus (Aquilifer) streamed real-time status via WebSocket. Memory pressure detection prevented overload &mdash; auto-paused launches when utilization rose, resumed when resources freed.
             </p>
           </div>
         </div>
@@ -1252,7 +1297,7 @@
                 <div class="code-block" style="margin-bottom: var(--space-3);">
                   <code><span style="color: var(--color-text-muted);">$</span> <span style="color: var(--color-accent);">pip install</span> centurion</code>
                 </div>
-                <p class="step-description">Includes Harness Loop skill for project orchestration.</p>
+                <p class="step-description">Installs Centurion with hardware-aware scheduling.</p>
               </div>
             </div>
 
@@ -1273,7 +1318,7 @@
   Agent type: claude_cli | Max agents: 20
 
 <span style="color: var(--color-success);">Centurion is ONLINE [quickstart mode]</span>
-<span style="color: var(--color-success);">Harness Loop: installed &#10003;</span></code>
+<span style="color: var(--color-success);">Health: http://localhost:8100/health &#10003;</span></code>
                 </div>
               </div>
             </div>
@@ -1284,11 +1329,11 @@
               <div class="step-content">
                 <h3 class="step-title">Use</h3>
                 <div class="code-block">
-                  <code><span style="color: var(--color-text-muted);"># In Claude Code, type:</span>
-<span style="color: var(--color-accent);">/harness-loop</span>
+                  <code><span style="color: var(--color-text-muted);"># Check system status:</span>
+<span style="color: var(--color-accent);">curl</span> http://localhost:8100/api/centurion/status
 
-<span style="color: var(--color-text-muted);"># Or via REST API:</span>
-<span style="color: var(--color-accent);">curl</span> http://localhost:8100/api/centurion/status</code>
+<span style="color: var(--color-text-muted);"># Or install as a LaunchAgent (auto-restart on boot):</span>
+<span style="color: var(--color-accent);">./scripts/install-launchd.sh</span></code>
                 </div>
               </div>
             </div>
@@ -1316,19 +1361,10 @@
               </div>
             </a>
 
-            <a href="https://github.com/spacelobster88/harness-loop" class="card" style="text-decoration: none;">
-              <div class="card-label">Skill</div>
-              <div class="card-title">Harness Loop</div>
-              <div class="card-description">Claude Code skill for structured project orchestration with planning, execution, and review phases.</div>
-              <div style="margin-top: var(--space-4);">
-                <span class="btn-secondary">View on GitHub &rarr;</span>
-              </div>
-            </a>
-
             <a href="https://github.com/spacelobster88/auspex" class="card" style="text-decoration: none;">
               <div class="card-label">Full Stack</div>
               <div class="card-title">Auspex</div>
-              <div class="card-description">The complete AI operations stack. Centurion + Harness Loop + monitoring, bundled and ready to deploy.</div>
+              <div class="card-description">The complete AI operations stack. Centurion + monitoring + provisioning, bundled and ready to deploy on any Mac.</div>
               <div style="margin-top: var(--space-4);">
                 <span class="btn-secondary">View on GitHub &rarr;</span>
               </div>
@@ -1381,7 +1417,7 @@
                   <td>Scheduling</td>
                   <td><span style="color: var(--color-text-muted);">&#10007; None</span></td>
                   <td><span style="color: var(--color-text-muted);">&#10007; None</span></td>
-                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; K8s-style admission</span></td>
+                  <td class="col-highlight"><span style="color: var(--color-accent);">&#10003; HW-aware admission</span></td>
                 </tr>
                 <tr>
                   <td>Memory safety</td>
