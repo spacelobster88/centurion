@@ -835,7 +835,7 @@
           </div>
           <div class="metric-divider"></div>
           <div class="metric">
-            <div class="metric-value">K8s</div>
+            <div class="metric-value">k8s-style</div>
             <div class="metric-label">Scheduling</div>
           </div>
           <div class="metric-divider"></div>
@@ -957,7 +957,7 @@
 
           <!-- Success Story Pills Navigation -->
           <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-4);">
-            <button class="cs-pill active" data-cs="cs-1">OpenClaw Bug Fixes</button>
+            <button class="cs-pill active" data-cs="cs-1">OpenClaw Mega Bug Fixing</button>
             <button class="cs-pill" data-cs="cs-2">PlugMate Research</button>
             <button class="cs-pill" data-cs="cs-3">20-Agent Fleet</button>
             <button class="cs-pill" data-cs="cs-4">Enterprise DevOps</button>
@@ -971,25 +971,25 @@
           <div class="card" style="margin-bottom: var(--space-6);">
             <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);">
               <span class="card-label" style="margin-bottom: 0;">Success Story 01</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">8 PRs</span>
-              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">~30 min</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-accent); border: 1px solid var(--color-accent); border-radius: var(--radius-sm);">50 MRs</span>
+              <span style="display: inline-block; padding: 2px var(--space-3); font-family: var(--font-mono); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--color-info); border: 1px solid var(--color-info); border-radius: var(--radius-sm);">Multi-hour</span>
             </div>
-            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">OpenClaw Bug Fixes</h3>
+            <h3 class="card-title" style="font-size: var(--text-2xl); margin-bottom: var(--space-3);">OpenClaw Mega Bug Fixing Campaign</h3>
             <p class="card-description" style="font-size: var(--text-base); line-height: var(--leading-normal); max-width: 65ch; margin-bottom: var(--space-4);">
-              An open-source Rust project had a backlog of bugs. Centurion's harness loop decomposed them into a task DAG with parallel engineering tasks, each gated by QA. Progressive ramp-up scaled from 1 to 4 agents safely.
+              A marathon bug-fixing campaign against the OpenClaw Rust codebase. Centurion's harness loop ran for hours without interruption, decomposing the massive bug backlog into a task DAG with parallel engineering tasks, each gated by local test verification before MR submission.
             </p>
             <div style="display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-6);">
-              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">8</span>
-              <span class="text-muted" style="font-size: var(--text-sm);">pull requests merged in a single 30-minute session</span>
+              <span style="font-size: var(--text-3xl); font-weight: var(--weight-semibold); color: var(--color-accent);">50</span>
+              <span class="text-muted" style="font-size: var(--text-sm);">bug-fixing merge requests submitted with all local tests passing</span>
             </div>
             <div class="card-metrics">
               <div>
-                <div class="card-metric-label">Ramp-up</div>
-                <div class="card-metric-value">1&#8594;2&#8594;4 agents</div>
+                <div class="card-metric-label">Duration</div>
+                <div class="card-metric-value">Hours (uninterrupted)</div>
               </div>
               <div>
                 <div class="card-metric-label">Test Suite</div>
-                <div class="card-metric-value">7,000+ tests</div>
+                <div class="card-metric-value">All local tests passed</div>
               </div>
               <div>
                 <div class="card-metric-label">Memory</div>
@@ -1004,7 +1004,7 @@
           <div class="card" style="border-left: 2px solid var(--color-accent);">
             <p class="card-label">What Centurion Did</p>
             <p class="card-description" style="line-height: var(--leading-normal);">
-              Decomposed the bug backlog into a task DAG &mdash; architecture phase for issue triage, parallel engineering tasks for fixes, and QA gates before PR submission. Hardware-aware scheduling ran the full Rust test suite (7,000+ cases) per PR without OOM kills. When memory pressure hit &ldquo;warn&rdquo; during concurrent test runs, auto-throttled batch size and resumed once pressure normalized.
+              Orchestrated a multi-hour autonomous bug-fixing campaign, decomposing 50 issues into a task DAG &mdash; architecture phase for issue triage, parallel engineering tasks for fixes, and QA gates requiring all local tests to pass before MR submission. Hardware-aware scheduling kept agents running at optimal concurrency throughout the entire session. Auto-throttled when memory pressure rose and resumed seamlessly, delivering 50 verified merge requests without a single interruption or human intervention.
             </p>
           </div>
         </div>
