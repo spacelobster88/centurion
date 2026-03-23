@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "centurion"
+name = "aros-centurion"
 version = "0.1.0"
 description = "AI Agent Orchestration Engine — spawn and command an army of AI agents with Roman military precision"
 readme = "README.md"
@@ -38,6 +38,8 @@ dev = [
     "pytest-asyncio>=0.24",
     "pytest-cov>=5.0",
     "httpx>=0.28.0",
+    "build>=1.0",
+    "twine>=6.0",
 ]
 
 [project.scripts]
@@ -47,6 +49,9 @@ centurion = "centurion.__main__:main"
 Homepage = "https://github.com/spacelobster88/centurion"
 Repository = "https://github.com/spacelobster88/centurion"
 Issues = "https://github.com/spacelobster88/centurion/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["centurion"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
