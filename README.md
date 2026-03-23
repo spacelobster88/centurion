@@ -48,7 +48,7 @@ AI coding agents operate at three distinct layers. Understanding this hierarchy 
 │  ✦ DAG-based task decomposition with phase progression               │
 │  ✦ Real-time broadcasting + event streaming (Aquilifer)              │
 │  ✦ Auto-scaling (Optio) adjusts fleet size based on resources        │
-│  ✦ pip install centurion installs both Centurion + Harness Loop      │
+│  ✦ pip install aros-centurion installs both Centurion + Harness Loop │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -66,7 +66,7 @@ AI coding agents operate at three distinct layers. Understanding this hierarchy 
 | **Broadcasting** | No | No | **Yes (all/legion/century)** |
 | **When to use** | Quick fixes | Simple parallel tasks | **Structured projects at scale** |
 
-> **Centurion and Harness Loop ship together.** `pip install centurion` installs both. Harness Loop handles project-level task orchestration (decompose → schedule → execute → review), while Centurion handles fleet-level resource management (how many agents, on what hardware, with what limits). Together they solve the problem that Claude Code subagents create: unmanaged parallelism that crashes your machine.
+> **Centurion and Harness Loop ship together.** `pip install aros-centurion` installs both. Harness Loop handles project-level task orchestration (decompose → schedule → execute → review), while Centurion handles fleet-level resource management (how many agents, on what hardware, with what limits). Together they solve the problem that Claude Code subagents create: unmanaged parallelism that crashes your machine.
 
 > **Getting started?** Use [Auspex](https://github.com/spacelobster88/auspex) to set up the full stack (Centurion + Harness Loop + Claude gateway) on a fresh Mac in one command.
 
@@ -156,7 +156,7 @@ The fastest way to get Centurion running. Installing Centurion automatically ins
 
 ```bash
 # Install (includes Harness Loop)
-pip install centurion
+pip install aros-centurion
 
 # One-click launch (probes hardware, auto-configures, starts server)
 centurion quickstart

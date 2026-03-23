@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 class CenturionError(Exception):
     def __init__(self, message: str, *, retryable: bool = False):
         super().__init__(message)

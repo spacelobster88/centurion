@@ -36,6 +36,8 @@ from typing import AsyncIterator
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from centurion.a2a.router import a2a_router
 from centurion.api.router import health_router, router
@@ -56,6 +58,24 @@ BANNER = r"""
 / /___/  __/ / / / /_/ /_/ / /  / / /_/ / / / /
 \____/\___/_/ /_/\__/\__,_/_/  /_/\____/_/ /_/
 """
+
+_SITE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "site")
+
+
+def _mount_dashboard(app: FastAPI) -> None:
+    """Mount the static dashboard site if the site/ directory exists."""
+    if not os.path.isdir(_SITE_DIR):
+        return
+    index = os.path.join(_SITE_DIR, "index.html")
+
+    @app.get("/", include_in_schema=False)
+    async def dashboard_root():
+        return FileResponse(index)
+
+    images_dir = os.path.join(_SITE_DIR, "images")
+    if os.path.isdir(images_dir):
+        app.mount("/images", StaticFiles(directory=images_dir), name="site-images")
+
 
 QUICKSTART_HEADER = r"""
   ____        _      _        _             _
@@ -338,6 +358,7 @@ def cmd_quickstart(args: argparse.Namespace) -> None:
     app.include_router(router)
     app.include_router(a2a_router)
     app.add_api_websocket_route("/api/centurion/events", websocket_endpoint)
+    _mount_dashboard(app)
     uvicorn.run(app, host=args.host, port=args.port)
 
 
@@ -398,6 +419,7 @@ def cmd_up(args: argparse.Namespace) -> None:
     app.include_router(router)
     app.include_router(a2a_router)
     app.add_api_websocket_route("/api/centurion/events", websocket_endpoint)
+    _mount_dashboard(app)
     uvicorn.run(app, host=args.host, port=args.port)
 
 

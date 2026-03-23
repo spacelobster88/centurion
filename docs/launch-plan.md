@@ -100,7 +100,7 @@ Welcome, Legionary! Every great army needs soldiers.
 
 **Demo Script (for GIF/video):**
 ```
-1. pip install centurion
+1. pip install aros-centurion
 2. Start the engine (show the Roman-themed CLI output)
 3. Spawn 20 agents with a single command
 4. Show the scheduling dashboard / logs
@@ -275,7 +275,7 @@ Title: Centurion — Python framework for orchestrating 100+
        AI agents (K8s-inspired, open source)
 
 Body:
-pip install centurion — and you get a full agent
+pip install aros-centurion — and you get a full agent
 orchestration engine with scheduling, autoscaling,
 and 5 integration methods.
 
@@ -348,7 +348,7 @@ Pick what fits your stack. [5/8]
 Tweet 6:
 Quick start:
 
-pip install centurion
+pip install aros-centurion
 
 3 lines of Python to spawn 50 agents.
 10 lines to build a full research pipeline.

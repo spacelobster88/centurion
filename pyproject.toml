@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "AI Agent Orchestration Engine — spawn and command an army of AI agents with Roman military precision"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.12"
+requires-python = ">=3.8"
 authors = [
     { name = "Eddie Tong", email = "xinhant@gmail.com" },
 ]
@@ -17,6 +17,10 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -61,7 +65,7 @@ markers = [
 ]
 
 [tool.ruff]
-target-version = "py312"
+target-version = "py38"
 line-length = 120
 
 [tool.ruff.lint]
@@ -76,7 +80,7 @@ indent-style = "space"
 known-first-party = ["centurion"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.8"
 strict_optional = true
 ignore_missing_imports = true
 warn_return_any = true

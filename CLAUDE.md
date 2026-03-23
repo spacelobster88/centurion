@@ -54,3 +54,11 @@ Work with QA to write test plans using TDD pattern:
 3. Engineering implements to make tests pass
 4. PM reviews that implementation matches user intent
 ```
+
+### Eddie-Nirmana (Avatar Agent)
+- **Repo**: `~/eddie-nirmana/` (private GitHub: spacelobster88/eddie-nirmana)
+- **Purpose**: Eddie's digital avatar — manages agents and continues work when Eddie is away
+- **Persona & Protocols**: See repo for identity, decision logging, handoff, and agent management
+- **Decision Log**: All non-trivial decisions committed to `~/eddie-nirmana/decisions/` with git history for rollback
+- **Reporting**: All agents → Nirmana (dotted line) → Eddie (solid line)
+- **Authority**: GREEN=auto, YELLOW=execute+log, RED=wait for Eddie

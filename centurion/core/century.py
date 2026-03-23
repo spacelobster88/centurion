@@ -49,7 +49,7 @@ class CenturyConfig:
 
 
 # Priority queue item: (priority, submission_time, task_id, prompt, future)
-type QueueItem = tuple[int, float, str, str, asyncio.Future[AgentResult]]
+QueueItem = tuple[int, float, str, str, "asyncio.Future[AgentResult]"]
 
 
 class Century:
