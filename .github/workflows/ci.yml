@@ -62,7 +62,7 @@ jobs:
         with:
           python-version: "3.13"
           cache: "pip"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: coverage-report
       - run: pip install diff-cover
