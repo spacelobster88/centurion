@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "aros-centurion"
-version = "0.1.0"
+version = "0.1.1"
 description = "AI Agent Orchestration Engine — spawn and command an army of AI agents with Roman military precision"
 readme = "README.md"
 license = "MIT"
