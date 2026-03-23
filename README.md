@@ -82,13 +82,13 @@ Centurion is an AI agent orchestration engine that manages fleets of AI agents a
                         |    Control Plane      |
                         +----------+------------+
                                    |
-            +----------------------+----------------------+
-            |                      |                      |
-   +--------v--------+   +--------v--------+   +---------v--------+
-   |    Scheduler     |   |   Broadcaster   |   |    EventBus      |
-   |  (K8s-inspired   |   |  (all/legion/   |   |   (Aquilifer)    |
-   |  admission ctrl) |   |  century scope) |   |  WebSocket pub-  |
-   +--------+---------+   +--------+--------+   |  sub events      |
+            +----------------------+-----------------------+
+            |                      |                       |
+   +--------v--------+   +--------v--------+     +---------v--------+
+   |    Scheduler     |   |   Broadcaster   |    |    EventBus      |
+   |  (K8s-inspired   |   |  (all/legion/   |    |   (Aquilifer)    |
+   |  admission ctrl) |   |  century scope) |    |  WebSocket pub-  |
+   +--------+---------+   +--------+--------+    |  sub events      |
             |                      |             +---------+--------+
             +----------------------+                       |
                         |                                  |
@@ -101,12 +101,12 @@ Centurion is an AI agent orchestration engine that manages fleets of AI agents a
        |                                 |                 |
   +----+--------+                   +----+----+            |
   |             |                   |         |            |
-+-v------+ +---v-----+        +----v---+ +---v-----+      |
-|Century | |Century  |        |Century | |Century  |      |
-|claude  | |claude   |        |shell   | |claude   |      |
-|_cli x5 | |_api x3  |        |  x10   | |_api x8  |      |
-+---+----+ +---+-----+        +---+----+ +---+-----+      |
-    |          |                   |          |             |
++-v------+ +---v-----+        +----v---+ +---v-----+       |
+|Century | |Century  |        |Century | |Century  |       |
+|claude  | |claude   |        |shell   | |claude   |       |
+|_cli x5 | |_api x3  |        |  x10   | |_api x8  |       |
++---+----+ +---+-----+        +---+----+ +---+-----+       |
+    |          |                   |          |            |
   L L L L L  L L L             L L L L..  L L L L..        |
   | | | | |  | | |             | | | |    | | | |          |
   v v v v v  v v v             v v v v    v v v v          |
