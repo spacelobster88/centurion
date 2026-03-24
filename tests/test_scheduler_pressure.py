@@ -46,7 +46,13 @@ class TestMemoryPressureLevelMethod:
         from centurion.core.scheduler import MemoryPressureLevel
 
         sched = CenturionScheduler(config=CenturionConfig())
-        with patch("subprocess.run") as mock_run:
+        with (
+            patch("centurion.core.scheduler.platform") as mock_platform,
+            patch("subprocess.run") as mock_run,
+            patch.object(CenturionScheduler, "_ram_total_mb", return_value=16384),
+            patch.object(CenturionScheduler, "_ram_compressor_mb", return_value=0),
+        ):
+            mock_platform.system.return_value = "Darwin"
             mock_run.return_value = MagicMock(stdout="4\n", returncode=0)
             result = sched._memory_pressure_level()
             assert result == MemoryPressureLevel.NORMAL
@@ -55,7 +61,13 @@ class TestMemoryPressureLevelMethod:
         from centurion.core.scheduler import MemoryPressureLevel
 
         sched = CenturionScheduler(config=CenturionConfig())
-        with patch("subprocess.run") as mock_run:
+        with (
+            patch("centurion.core.scheduler.platform") as mock_platform,
+            patch("subprocess.run") as mock_run,
+            patch.object(CenturionScheduler, "_ram_total_mb", return_value=16384),
+            patch.object(CenturionScheduler, "_ram_compressor_mb", return_value=0),
+        ):
+            mock_platform.system.return_value = "Darwin"
             mock_run.return_value = MagicMock(stdout="2\n", returncode=0)
             result = sched._memory_pressure_level()
             assert result == MemoryPressureLevel.WARN
@@ -64,7 +76,13 @@ class TestMemoryPressureLevelMethod:
         from centurion.core.scheduler import MemoryPressureLevel
 
         sched = CenturionScheduler(config=CenturionConfig())
-        with patch("subprocess.run") as mock_run:
+        with (
+            patch("centurion.core.scheduler.platform") as mock_platform,
+            patch("subprocess.run") as mock_run,
+            patch.object(CenturionScheduler, "_ram_total_mb", return_value=16384),
+            patch.object(CenturionScheduler, "_ram_compressor_mb", return_value=0),
+        ):
+            mock_platform.system.return_value = "Darwin"
             mock_run.return_value = MagicMock(stdout="1\n", returncode=0)
             result = sched._memory_pressure_level()
             assert result == MemoryPressureLevel.CRITICAL
