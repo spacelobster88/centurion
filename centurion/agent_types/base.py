@@ -20,6 +20,7 @@ class AgentResult:
     error: str | None = None
     exit_code: int | None = None
     duration_seconds: float = 0.0
+    failure_type: str | None = None  # "jetsam", "sigkill_unknown", "crash", etc.
     metadata: dict[str, Any] = field(default_factory=dict)
 
 

@@ -12,6 +12,7 @@ from typing import Any
 
 from centurion.agent_types.base import AgentResult, AgentType
 from centurion.core.exceptions import AgentProcessError, TaskTimeoutError
+from centurion.core.jetsam import confirm_jetsam_kill, is_sigkill
 
 logger = logging.getLogger(__name__)
 
@@ -81,10 +82,26 @@ class Legionary:
                 if result.exit_code is not None and result.exit_code != 0:
                     crash_codes = {-9, -15, 137, 139}
                     if result.exit_code in crash_codes:
+                        jetsam = False
+                        if is_sigkill(result.exit_code):
+                            jetsam = confirm_jetsam_kill()
+                            if jetsam:
+                                result.failure_type = "jetsam"
+                                logger.warning(
+                                    "Agent killed by macOS Jetsam (memory pressure)",
+                                    extra={
+                                        "legionary_id": self.id,
+                                        "task_id": task_id,
+                                        "exit_code": result.exit_code,
+                                    },
+                                )
+                            else:
+                                result.failure_type = "sigkill_unknown"
                         raise AgentProcessError(
                             result.error or f"Process exited {result.exit_code}",
                             exit_code=result.exit_code,
                             stderr=result.error or "",
+                            jetsam=jetsam,
                         )
             self.total_duration += result.duration_seconds
             return result

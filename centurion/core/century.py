@@ -22,6 +22,7 @@ from centurion.core.exceptions import (
     CenturionError,
     TaskTimeoutError,
 )
+from centurion.core.jetsam import JetsamTracker
 from centurion.core.legionary import Legionary, LegionaryStatus
 from centurion.core.scheduler import MemoryPressureLevel
 
@@ -73,6 +74,7 @@ class Century:
         self._workers: dict[str, asyncio.Task] = {}
         self._optio_task: asyncio.Task | None = None
         self._circuit_breaker = CircuitBreaker(name=century_id)
+        self.jetsam_tracker = JetsamTracker()
         self._running = False
         self._last_scale_time: float = 0.0
         self._last_memory_scale_time: float = 0.0
@@ -207,6 +209,7 @@ class Century:
             "queue_depth": self.task_queue.qsize(),
             "total_tasks_completed": sum(l.tasks_completed for l in self.legionaries.values()),
             "total_tasks_failed": sum(l.tasks_failed for l in self.legionaries.values()),
+            "jetsam": self.jetsam_tracker.to_dict(),
         }
 
     # --- Internal ---
@@ -344,7 +347,51 @@ class Century:
                 )
                 if not future.done():
                     future.set_exception(exc)
-            except (AgentProcessError, AgentAPIError) as exc:
+            except AgentProcessError as exc:
+                self._circuit_breaker.record_failure()
+                if exc.jetsam:
+                    # Jetsam kill: track, emit event, force replacement
+                    self.jetsam_tracker.record_kill(
+                        legionary_id=leg_id,
+                        exit_code=exc.exit_code,
+                        confirmed=True,
+                    )
+                    logger.warning(
+                        "Jetsam kill detected — agent will be respawned",
+                        extra={
+                            "task_id": task_id,
+                            "legionary_id": leg_id,
+                            "exit_code": exc.exit_code,
+                            "jetsam_total": self.jetsam_tracker.kill_count,
+                        },
+                    )
+                    if self.event_bus:
+                        await self.event_bus.emit(
+                            "jetsam_eviction",
+                            entity_type="legionary",
+                            entity_id=leg_id,
+                            payload={
+                                "task_id": task_id,
+                                "exit_code": exc.exit_code,
+                                "century_id": self.id,
+                                "jetsam_total": self.jetsam_tracker.kill_count,
+                            },
+                        )
+                    if not future.done():
+                        future.set_exception(exc)
+                    # Force replacement of the killed legionary
+                    self.task_queue.task_done()
+                    await self._replace_legionary(leg_id)
+                    break
+                else:
+                    logger.error(
+                        "Task execution exception",
+                        extra={"task_id": task_id, "legionary_id": leg_id, "error_type": type(exc).__name__, "retryable": exc.retryable},
+                        exc_info=True,
+                    )
+                    if not future.done():
+                        future.set_exception(exc)
+            except AgentAPIError as exc:
                 self._circuit_breaker.record_failure()
                 logger.error(
                     "Task execution exception",
