@@ -11,8 +11,7 @@ import uuid
 
 from centurion.agent_types.registry import AgentTypeRegistry
 from centurion.config import CenturionConfig
-from centurion.core.broadcast import BroadcastResult, Broadcaster
-from centurion.core.century import CenturyConfig
+from centurion.core.broadcast import Broadcaster
 from centurion.core.events import EventBus
 from centurion.core.legion import Legion, LegionQuota
 from centurion.core.scheduler import CenturionScheduler
@@ -73,8 +72,8 @@ class Centurion:
 
     def _register_default_types(self) -> None:
         # Lazy imports to avoid circular deps and allow optional deps
-        from centurion.agent_types.claude_cli import ClaudeCliAgentType
         from centurion.agent_types.claude_api import ClaudeApiAgentType
+        from centurion.agent_types.claude_cli import ClaudeCliAgentType
         from centurion.agent_types.shell import ShellAgentType
 
         self.registry.register("claude_cli", ClaudeCliAgentType)
