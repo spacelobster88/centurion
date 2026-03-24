@@ -39,8 +39,7 @@ def build_agent_card(
                 "id": "fleet-orchestration",
                 "name": "Fleet Orchestration",
                 "description": (
-                    "Manage legions and centuries of AI agents. "
-                    "Raise legions, muster centuries, and distribute tasks."
+                    "Manage legions and centuries of AI agents. Raise legions, muster centuries, and distribute tasks."
                 ),
                 "tags": ["orchestration", "multi-agent", "fleet"],
                 "examples": [
@@ -52,10 +51,7 @@ def build_agent_card(
             {
                 "id": "broadcast",
                 "name": "Fleet Broadcast",
-                "description": (
-                    "Broadcast messages to all agents, a specific legion, "
-                    "or a specific century."
-                ),
+                "description": ("Broadcast messages to all agents, a specific legion, or a specific century."),
                 "tags": ["broadcast", "communication"],
                 "examples": [
                     "Broadcast 'switch to summarization mode' to all agents",
@@ -65,9 +61,7 @@ def build_agent_card(
             {
                 "id": "hardware-probe",
                 "name": "Hardware Monitoring",
-                "description": (
-                    "Probe system resources and get scheduling recommendations."
-                ),
+                "description": ("Probe system resources and get scheduling recommendations."),
                 "tags": ["monitoring", "hardware"],
                 "examples": [
                     "How many agents can this machine support?",

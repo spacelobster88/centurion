@@ -5,10 +5,13 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from centurion.agent_types.base import AgentResult, AgentType
 from centurion.config import ResourceRequirements, ResourceSpec
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +61,9 @@ class ClaudeApiAgentType(AgentType):
         legionary_id = handle.get("legionary_id", "unknown")
 
         start = time.monotonic()
-        logger.debug("send_task: starting legionary_id=%s model=%s max_tokens=%d", legionary_id, self.model, self.max_tokens)
+        logger.debug(
+            "send_task: starting legionary_id=%s model=%s max_tokens=%d", legionary_id, self.model, self.max_tokens
+        )
         try:
             response = await client.messages.create(
                 model=self.model,
@@ -74,8 +79,11 @@ class ClaudeApiAgentType(AgentType):
                     output += block.text
             logger.info(
                 "send_task: completed legionary_id=%s model=%s duration=%.2fs input_tokens=%d output_tokens=%d",
-                legionary_id, response.model, elapsed,
-                response.usage.input_tokens, response.usage.output_tokens,
+                legionary_id,
+                response.model,
+                elapsed,
+                response.usage.input_tokens,
+                response.usage.output_tokens,
             )
             return AgentResult(
                 success=True,

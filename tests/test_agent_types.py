@@ -6,14 +6,12 @@ import platform
 
 import pytest
 
-from centurion.agent_types.base import AgentResult, AgentType
 from centurion.agent_types.claude_api import ClaudeApiAgentType
 from centurion.agent_types.claude_cli import ClaudeCliAgentType
 from centurion.agent_types.registry import AgentTypeRegistry
 from centurion.agent_types.shell import ShellAgentType
-from centurion.config import ResourceRequirements, ResourceSpec
+from centurion.config import ResourceRequirements
 from tests.conftest import MockAgentType
-
 
 # =========================================================================
 # Registry

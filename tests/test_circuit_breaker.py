@@ -2,8 +2,6 @@
 
 from unittest.mock import patch
 
-import pytest
-
 from centurion.core.circuit_breaker import CircuitBreaker, CircuitState
 
 

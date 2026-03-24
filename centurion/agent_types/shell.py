@@ -11,10 +11,13 @@ import logging
 import os
 import platform
 import time
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from centurion.agent_types.base import AgentResult, AgentType
 from centurion.config import ResourceRequirements, ResourceSpec
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +56,9 @@ class ShellAgentType(AgentType):
         logger.debug("send_task: starting legionary_id=%s shell=%s cwd=%s", legionary_id, self.shell, cwd)
 
         proc = await asyncio.create_subprocess_exec(
-            self.shell, "-c", task,
+            self.shell,
+            "-c",
+            task,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=cwd,
@@ -65,7 +70,7 @@ class ShellAgentType(AgentType):
                 proc.communicate(),
                 timeout=timeout,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             await proc.wait()
             logger.warning("send_task: timeout legionary_id=%s after %.1fs", legionary_id, timeout)
@@ -81,12 +86,15 @@ class ShellAgentType(AgentType):
         if proc.returncode != 0:
             logger.warning(
                 "send_task: failed legionary_id=%s exit_code=%d duration=%.2fs",
-                legionary_id, proc.returncode, elapsed,
+                legionary_id,
+                proc.returncode,
+                elapsed,
             )
         else:
             logger.info(
                 "send_task: completed legionary_id=%s exit_code=0 duration=%.2fs",
-                legionary_id, elapsed,
+                legionary_id,
+                elapsed,
             )
         return AgentResult(
             success=proc.returncode == 0,

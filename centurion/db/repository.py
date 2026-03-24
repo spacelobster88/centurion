@@ -3,18 +3,20 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 import aiosqlite
 
-from centurion.core.events import CenturionEvent
-from centurion.db.schema import TABLES, CREATE_INDEXES
+from centurion.db.schema import CREATE_INDEXES, TABLES
+
+if TYPE_CHECKING:
+    from centurion.core.events import CenturionEvent
 
 
 def _now_iso() -> str:
     """Return the current UTC timestamp in ISO-8601 format."""
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 def _row_to_dict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict[str, Any]:
@@ -122,9 +124,7 @@ class CenturionDB:
 
     async def get_task(self, task_id: str) -> dict[str, Any] | None:
         """Fetch a single task by ID."""
-        cursor = await self.conn.execute(
-            "SELECT * FROM centurion_tasks WHERE id = ?", (task_id,)
-        )
+        cursor = await self.conn.execute("SELECT * FROM centurion_tasks WHERE id = ?", (task_id,))
         row = await cursor.fetchone()
         if row is None:
             return None
@@ -175,9 +175,7 @@ class CenturionDB:
                 event.entity_type,
                 event.entity_id,
                 json.dumps(event.payload, default=str) if event.payload else None,
-                datetime.fromtimestamp(event.timestamp, tz=timezone.utc).strftime(
-                    "%Y-%m-%dT%H:%M:%S.%fZ"
-                ),
+                datetime.fromtimestamp(event.timestamp, tz=UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             ),
         )
         await self.conn.commit()

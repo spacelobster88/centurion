@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -31,9 +31,11 @@ from centurion.api.schemas import (
     TaskResponse,
 )
 from centurion.core.century import CenturyConfig
-from centurion.core.engine import Centurion
 from centurion.core.legion import LegionQuota
-from centurion.core.session_registry import SessionRegistry
+
+if TYPE_CHECKING:
+    from centurion.core.engine import Centurion
+    from centurion.core.session_registry import SessionRegistry
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/centurion", tags=["centurion"])
@@ -67,10 +69,7 @@ def _build_recommended_actions(
             if not info["closeable"]:
                 continue
             idle_seconds = int(now - meta.last_active)
-            actions.append(
-                f"Close idle session {session_id} "
-                f"(idle {idle_seconds}s, no bg children)"
-            )
+            actions.append(f"Close idle session {session_id} (idle {idle_seconds}s, no bg children)")
 
     # Batch size reduction.
     if pressure == MemoryPressureLevel.CRITICAL:
@@ -89,6 +88,7 @@ def _build_recommended_actions(
 # =========================================================================
 # Health check endpoints (mounted at root, outside /api/centurion)
 # =========================================================================
+
 
 @health_router.get(
     "/health",
@@ -112,9 +112,7 @@ async def readiness(request: Request) -> JSONResponse:
     # --- Engine ---
     engine = getattr(request.app.state, "centurion", None)
     if engine is None:
-        components["engine"] = ComponentStatus(
-            status="error", error="Engine not initialized"
-        )
+        components["engine"] = ComponentStatus(status="error", error="Engine not initialized")
     else:
         shutting_down = getattr(engine, "_shutting_down", False)
         components["engine"] = ComponentStatus(
@@ -127,9 +125,7 @@ async def readiness(request: Request) -> JSONResponse:
     # --- Scheduler ---
     scheduler = getattr(engine, "scheduler", None) if engine else None
     if scheduler is None:
-        components["scheduler"] = ComponentStatus(
-            status="error", error="Scheduler not initialized"
-        )
+        components["scheduler"] = ComponentStatus(status="error", error="Scheduler not initialized")
     else:
         try:
             system = scheduler.probe_system()
@@ -142,16 +138,12 @@ async def readiness(request: Request) -> JSONResponse:
                 memory_pressure=system.memory_pressure.value,
             )
         except Exception as exc:
-            components["scheduler"] = ComponentStatus(
-                status="error", error=str(exc)
-            )
+            components["scheduler"] = ComponentStatus(status="error", error=str(exc))
 
     # --- EventBus ---
     event_bus = getattr(engine, "event_bus", None) if engine else None
     if event_bus is None:
-        components["event_bus"] = ComponentStatus(
-            status="error", error="EventBus not initialized"
-        )
+        components["event_bus"] = ComponentStatus(status="error", error="EventBus not initialized")
     else:
         components["event_bus"] = ComponentStatus(
             status="ok",
@@ -169,9 +161,7 @@ async def readiness(request: Request) -> JSONResponse:
     # --- Database ---
     db = getattr(engine, "db", None) if engine else None
     if db is None:
-        components["database"] = ComponentStatus(
-            status="error", error="Database not configured"
-        )
+        components["database"] = ComponentStatus(status="error", error="Database not configured")
     else:
         components["database"] = ComponentStatus(status="ok")
 
@@ -197,7 +187,10 @@ async def request_logging_middleware(request: Request, call_next):
     logger.log(
         log_level,
         "request: method=%s path=%s status=%d duration_ms=%.1f",
-        request.method, request.url.path, response.status_code, duration_ms,
+        request.method,
+        request.url.path,
+        response.status_code,
+        duration_ms,
     )
     return response
 
@@ -210,6 +203,7 @@ def _engine(request: Request) -> Centurion:
 # =========================================================================
 # Fleet
 # =========================================================================
+
 
 @router.get("/status", response_model=FleetStatusResponse)
 async def fleet_status(request: Request) -> dict[str, Any]:
@@ -226,6 +220,7 @@ async def hardware_status(request: Request) -> dict[str, Any]:
 
     # Determine memory pressure from the report.
     from centurion.core.scheduler import MemoryPressureLevel
+
     pressure_str = report.get("system", {}).get("memory_pressure", "normal")
     try:
         pressure = MemoryPressureLevel(pressure_str)
@@ -236,7 +231,9 @@ async def hardware_status(request: Request) -> dict[str, Any]:
     scheduler = getattr(engine, "scheduler", None)
 
     report["recommended_actions"] = _build_recommended_actions(
-        pressure, session_registry=registry, scheduler=scheduler,
+        pressure,
+        session_registry=registry,
+        scheduler=scheduler,
     )
     return report
 
@@ -244,6 +241,7 @@ async def hardware_status(request: Request) -> dict[str, Any]:
 # =========================================================================
 # Broadcast
 # =========================================================================
+
 
 @router.post("/broadcast", response_model=BroadcastResponse)
 async def broadcast(request: Request, body: BroadcastRequest) -> dict[str, Any]:
@@ -256,15 +254,16 @@ async def broadcast(request: Request, body: BroadcastRequest) -> dict[str, Any]:
             target_id=body.target_id,
         )
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return result
 
 
 # =========================================================================
 # Legions
 # =========================================================================
+
 
 @router.post("/legions", response_model=LegionResponse, status_code=201)
 async def raise_legion(request: Request, body: RaiseLegionRequest) -> dict[str, Any]:
@@ -278,7 +277,7 @@ async def raise_legion(request: Request, body: RaiseLegionRequest) -> dict[str, 
             quota=quota,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return legion.status_report()
 
 
@@ -296,7 +295,7 @@ async def get_legion(request: Request, legion_id: str) -> dict[str, Any]:
     try:
         legion = engine.get_legion(legion_id)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return legion.status_report()
 
 
@@ -307,7 +306,7 @@ async def disband_legion(request: Request, legion_id: str) -> dict:
     try:
         await engine.disband_legion(legion_id)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return {"status": "disbanded", "legion_id": legion_id}
 
 
@@ -315,20 +314,19 @@ async def disband_legion(request: Request, legion_id: str) -> dict:
 # Centuries
 # =========================================================================
 
+
 @router.post(
     "/legions/{legion_id}/centuries",
     response_model=CenturyResponse,
     status_code=201,
 )
-async def add_century(
-    request: Request, legion_id: str, body: AddCenturyRequest
-) -> dict[str, Any]:
+async def add_century(request: Request, legion_id: str, body: AddCenturyRequest) -> dict[str, Any]:
     """Add a century to an existing legion."""
     engine = _engine(request)
     try:
         legion = engine.get_legion(legion_id)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     config = CenturyConfig(
         agent_type_name=body.agent_type,
@@ -347,7 +345,7 @@ async def add_century(
             event_bus=engine.event_bus,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return century.status_report()
 
 
@@ -362,9 +360,7 @@ async def get_century(request: Request, century_id: str) -> dict[str, Any]:
 
 
 @router.post("/centuries/{century_id}/scale", response_model=CenturyResponse)
-async def scale_century(
-    request: Request, century_id: str, body: ScaleRequest
-) -> dict[str, Any]:
+async def scale_century(request: Request, century_id: str, body: ScaleRequest) -> dict[str, Any]:
     """Manually scale a century to a target legionary count."""
     engine = _engine(request)
     for legion in engine.legions.values():
@@ -390,14 +386,13 @@ async def remove_century(request: Request, century_id: str) -> dict:
 # Tasks
 # =========================================================================
 
+
 @router.post(
     "/centuries/{century_id}/tasks",
     response_model=TaskResponse,
     status_code=201,
 )
-async def submit_task_to_century(
-    request: Request, century_id: str, body: SubmitTaskRequest
-) -> dict[str, Any]:
+async def submit_task_to_century(request: Request, century_id: str, body: SubmitTaskRequest) -> dict[str, Any]:
     """Submit a task to a specific century."""
     engine = _engine(request)
     for legion in engine.legions.values():
@@ -425,24 +420,22 @@ async def submit_task_to_century(
     response_model=list[TaskResponse],
     status_code=201,
 )
-async def submit_batch_to_legion(
-    request: Request, legion_id: str, body: SubmitBatchRequest
-) -> list[dict[str, Any]]:
+async def submit_batch_to_legion(request: Request, legion_id: str, body: SubmitBatchRequest) -> list[dict[str, Any]]:
     """Submit a batch of tasks distributed across a legion's centuries."""
     engine = _engine(request)
     try:
         legion = engine.get_legion(legion_id)
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
     try:
-        futures = await legion.submit_batch(
+        await legion.submit_batch(
             prompts=body.prompts,
             priority=body.priority,
             distribute=body.distribute,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     return [
         {
@@ -470,7 +463,7 @@ async def get_task(request: Request, task_id: str) -> dict[str, Any]:
             task = await engine.db.get_task(task_id)
         except Exception as exc:
             logger.error("Database error in get_task: %s", exc)
-            raise HTTPException(status_code=503, detail="Database temporarily unavailable")
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable") from exc
         if task:
             return task
     raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
@@ -487,7 +480,7 @@ async def cancel_task(request: Request, task_id: str) -> dict[str, str]:
             task = await engine.db.get_task(task_id)
         except Exception as exc:
             logger.error("Database error in cancel_task: %s", exc)
-            raise HTTPException(status_code=503, detail="Database temporarily unavailable")
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable") from exc
         if task is None:
             raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
         if task["status"] in ("completed", "failed", "cancelled"):
@@ -499,7 +492,7 @@ async def cancel_task(request: Request, task_id: str) -> dict[str, str]:
             await engine.db.update_task(task_id, status="cancelled")
         except Exception as exc:
             logger.error("Database error in cancel_task: %s", exc)
-            raise HTTPException(status_code=503, detail="Database temporarily unavailable")
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable") from exc
         return {"task_id": task_id, "status": "cancelled"}
     raise HTTPException(status_code=404, detail=f"Task {task_id!r} not found")
 
@@ -508,13 +501,12 @@ async def cancel_task(request: Request, task_id: str) -> dict[str, str]:
 # Legionaries
 # =========================================================================
 
+
 @router.get(
     "/centuries/{century_id}/legionaries",
     response_model=list[LegionaryResponse],
 )
-async def list_legionaries(
-    request: Request, century_id: str
-) -> list[dict[str, Any]]:
+async def list_legionaries(request: Request, century_id: str) -> list[dict[str, Any]]:
     """List all legionaries in a century."""
     engine = _engine(request)
     for legion in engine.legions.values():
@@ -525,28 +517,23 @@ async def list_legionaries(
 
 
 @router.get("/legionaries/{legionary_id}", response_model=LegionaryResponse)
-async def get_legionary(
-    request: Request, legionary_id: str
-) -> dict[str, Any]:
+async def get_legionary(request: Request, legionary_id: str) -> dict[str, Any]:
     """Get details for a specific legionary by ID."""
     engine = _engine(request)
     for legion in engine.legions.values():
         for century in legion.centuries.values():
             if legionary_id in century.legionaries:
                 return century.legionaries[legionary_id].to_dict()
-    raise HTTPException(
-        status_code=404, detail=f"Legionary {legionary_id!r} not found"
-    )
+    raise HTTPException(status_code=404, detail=f"Legionary {legionary_id!r} not found")
 
 
 # =========================================================================
 # Broadcast
 # =========================================================================
 
+
 @router.post("/broadcast/century/{century_id}", status_code=200)
-async def broadcast_to_century(
-    request: Request, century_id: str, body: SubmitTaskRequest
-) -> dict[str, Any]:
+async def broadcast_to_century(request: Request, century_id: str, body: SubmitTaskRequest) -> dict[str, Any]:
     """Broadcast a message to all legionaries in a century (row)."""
     engine = _engine(request)
     try:
@@ -556,14 +543,12 @@ async def broadcast_to_century(
             wait=False,
         )
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return result.to_dict()
 
 
 @router.post("/broadcast/legion/{legion_id}", status_code=200)
-async def broadcast_to_legion(
-    request: Request, legion_id: str, body: SubmitTaskRequest
-) -> dict[str, Any]:
+async def broadcast_to_legion(request: Request, legion_id: str, body: SubmitTaskRequest) -> dict[str, Any]:
     """Broadcast a message to all legionaries in a legion (column)."""
     engine = _engine(request)
     try:
@@ -573,14 +558,12 @@ async def broadcast_to_legion(
             wait=False,
         )
     except KeyError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return result.to_dict()
 
 
 @router.post("/broadcast/fleet", status_code=200)
-async def broadcast_to_fleet(
-    request: Request, body: SubmitTaskRequest
-) -> dict[str, Any]:
+async def broadcast_to_fleet(request: Request, body: SubmitTaskRequest) -> dict[str, Any]:
     """Broadcast a message to all legionaries in the entire fleet."""
     engine = _engine(request)
     result = await engine.broadcaster.broadcast_to_fleet(
@@ -593,6 +576,7 @@ async def broadcast_to_fleet(
 # =========================================================================
 # Closeable Sessions
 # =========================================================================
+
 
 @router.get(
     "/closeable-sessions",
@@ -635,6 +619,7 @@ async def closeable_sessions(request: Request) -> CloseableSessionsResponse:
 # Recommend
 # =========================================================================
 
+
 @router.post("/purge")
 async def purge_memory(request: Request) -> dict[str, Any]:
     """Trigger macOS memory purge (sudo -n purge). Best-effort, non-blocking."""
@@ -656,12 +641,14 @@ async def purge_memory(request: Request) -> dict[str, Any]:
 async def recommend(request: Request) -> dict[str, Any]:
     """Get hardware-aware deployment recommendation."""
     from centurion.__main__ import _build_recommendation
+
     return _build_recommendation()
 
 
 # =========================================================================
 # Agent types
 # =========================================================================
+
 
 @router.get("/agent-types")
 async def list_agent_types(request: Request) -> dict[str, Any]:
@@ -684,6 +671,7 @@ async def list_agent_types(request: Request) -> dict[str, Any]:
 # Sentinel
 # =========================================================================
 
+
 @router.get("/sentinel", response_model=SentinelStatusResponse)
 async def sentinel_status(request: Request) -> SentinelStatusResponse:
     """Return sentinel service status and kill metrics."""
@@ -691,7 +679,10 @@ async def sentinel_status(request: Request) -> SentinelStatusResponse:
     sentinel = getattr(engine, "sentinel", None)
     if sentinel is None:
         return SentinelStatusResponse(
-            enabled=False, running=False, config={}, metrics={},
+            enabled=False,
+            running=False,
+            config={},
+            metrics={},
         )
     return SentinelStatusResponse(
         enabled=sentinel.config.enabled,

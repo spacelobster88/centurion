@@ -178,12 +178,8 @@ async def test_scan_once_respects_priority_ordering(registry_with_sessions):
     kills = await sentinel.scan_once()
 
     # Find positions of interactive vs background kills
-    interactive_positions = [
-        i for i, k in enumerate(kills) if k.session_type == "interactive"
-    ]
-    background_positions = [
-        i for i, k in enumerate(kills) if k.session_type == "background"
-    ]
+    interactive_positions = [i for i, k in enumerate(kills) if k.session_type == "interactive"]
+    background_positions = [i for i, k in enumerate(kills) if k.session_type == "background"]
 
     if interactive_positions and background_positions:
         assert max(interactive_positions) < min(background_positions), (

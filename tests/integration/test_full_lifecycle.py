@@ -9,18 +9,16 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-import pytest_asyncio
 
 from centurion.agent_types.base import AgentResult, AgentType
 from centurion.config import CenturionConfig, ResourceRequirements, ResourceSpec
 from centurion.core.century import CenturyConfig
 from centurion.core.engine import Centurion
-from centurion.core.events import EventBus
-
 
 # ---------------------------------------------------------------------------
 # MockAgentType — deterministic, fast, always succeeds
 # ---------------------------------------------------------------------------
+
 
 class MockAgentType(AgentType):
     """Deterministic mock agent for integration tests."""
@@ -62,6 +60,7 @@ class MockAgentType(AgentType):
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def engine() -> Centurion:
     """Create a Centurion engine with the mock agent type registered."""
@@ -79,6 +78,7 @@ def engine() -> Centurion:
 # Tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_full_lifecycle(engine: Centurion):
     """End-to-end: raise legion -> add century -> submit tasks -> shutdown."""
@@ -93,7 +93,7 @@ async def test_full_lifecycle(engine: Centurion):
         agent_type_name="mock",
         min_legionaries=2,
         max_legionaries=5,
-        autoscale=False,   # disable autoscaler to keep the test deterministic
+        autoscale=False,  # disable autoscaler to keep the test deterministic
         task_timeout=30.0,
     )
     century = await legion.add_century(

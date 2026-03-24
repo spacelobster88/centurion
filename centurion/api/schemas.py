@@ -6,13 +6,14 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-
 # ---------------------------------------------------------------------------
 # Request models
 # ---------------------------------------------------------------------------
 
+
 class RaiseLegionRequest(BaseModel):
     """Create a new legion."""
+
     legion_id: str | None = None
     name: str
     quota: dict[str, Any] | None = None
@@ -20,6 +21,7 @@ class RaiseLegionRequest(BaseModel):
 
 class AddCenturyRequest(BaseModel):
     """Add a century to a legion."""
+
     century_id: str | None = None
     agent_type: str = "claude_cli"
     agent_type_config: dict[str, Any] = Field(default_factory=dict)
@@ -31,6 +33,7 @@ class AddCenturyRequest(BaseModel):
 
 class SubmitTaskRequest(BaseModel):
     """Submit a single task to a century."""
+
     prompt: str
     priority: int = 5
     task_id: str | None = None
@@ -38,6 +41,7 @@ class SubmitTaskRequest(BaseModel):
 
 class SubmitBatchRequest(BaseModel):
     """Submit multiple tasks to a legion for distribution."""
+
     prompts: list[str]
     priority: int = 5
     distribute: str = "round_robin"
@@ -45,6 +49,7 @@ class SubmitBatchRequest(BaseModel):
 
 class BroadcastRequest(BaseModel):
     """Broadcast a message to agents."""
+
     message: str
     target: Literal["all", "legion", "century"] = "all"
     target_id: str | None = None
@@ -52,6 +57,7 @@ class BroadcastRequest(BaseModel):
 
 class ScaleRequest(BaseModel):
     """Manually scale a century."""
+
     target_count: int
 
 
@@ -59,8 +65,10 @@ class ScaleRequest(BaseModel):
 # Response models
 # ---------------------------------------------------------------------------
 
+
 class TaskResponse(BaseModel):
     """A single task."""
+
     task_id: str
     century_id: str
     legion_id: str | None = None
@@ -80,6 +88,7 @@ class TaskResponse(BaseModel):
 
 class LegionaryResponse(BaseModel):
     """Status of a single legionary (agent instance)."""
+
     id: str
     century_id: str
     agent_type: str | None = None
@@ -95,6 +104,7 @@ class LegionaryResponse(BaseModel):
 
 class CenturyResponse(BaseModel):
     """Status of a century."""
+
     century_id: str
     agent_type: str
     config: dict[str, Any] = Field(default_factory=dict)
@@ -109,6 +119,7 @@ class CenturyResponse(BaseModel):
 
 class LegionResponse(BaseModel):
     """Status of a legion."""
+
     legion_id: str
     name: str
     quota: dict[str, Any] = Field(default_factory=dict)
@@ -119,6 +130,7 @@ class LegionResponse(BaseModel):
 
 class BroadcastResponse(BaseModel):
     """Result of a broadcast operation."""
+
     target: str
     target_id: str | None = None
     total_delivered: int = 0
@@ -127,6 +139,7 @@ class BroadcastResponse(BaseModel):
 
 class FleetStatusResponse(BaseModel):
     """Top-level fleet status."""
+
     total_legions: int = 0
     total_centuries: int = 0
     total_legionaries: int = 0
@@ -138,13 +151,16 @@ class FleetStatusResponse(BaseModel):
 # Health check response models
 # ---------------------------------------------------------------------------
 
+
 class HealthResponse(BaseModel):
     """Liveness probe response."""
+
     status: Literal["ok"] = "ok"
 
 
 class ComponentStatus(BaseModel):
     """Status of a single subsystem component."""
+
     status: Literal["ok", "error"]
     error: str | None = None
     # Optional diagnostic fields (component-specific, ignored if absent)
@@ -163,6 +179,7 @@ class ComponentStatus(BaseModel):
 
 class ReadinessResponse(BaseModel):
     """Readiness probe response."""
+
     status: Literal["ready", "not_ready"]
     components: dict[str, ComponentStatus]
 
@@ -171,8 +188,10 @@ class ReadinessResponse(BaseModel):
 # Closeable sessions
 # ---------------------------------------------------------------------------
 
+
 class CloseableSessionEntry(BaseModel):
     """A single session that is safe to close."""
+
     session_id: str
     idle_seconds: float
     reason: str
@@ -181,6 +200,7 @@ class CloseableSessionEntry(BaseModel):
 
 class CloseableSessionsResponse(BaseModel):
     """Response for the closeable-sessions endpoint."""
+
     sessions: list[CloseableSessionEntry]
     total: int
 
@@ -189,8 +209,10 @@ class CloseableSessionsResponse(BaseModel):
 # Sentinel
 # ---------------------------------------------------------------------------
 
+
 class SentinelStatusResponse(BaseModel):
     """Status of the sentinel service."""
+
     enabled: bool
     running: bool
     config: dict[str, Any] = Field(default_factory=dict)

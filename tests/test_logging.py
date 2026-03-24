@@ -6,8 +6,6 @@ import json
 import logging
 import sys
 
-import pytest
-
 from centurion.logging import (
     CenturionDevFormatter,
     CenturionJSONFormatter,

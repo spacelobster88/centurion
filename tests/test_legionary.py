@@ -1,13 +1,12 @@
 """Tests for Legionary lifecycle and task execution."""
 
-import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
 
 from centurion.agent_types.base import AgentResult
 from centurion.core.exceptions import AgentProcessError, TaskTimeoutError
-from centurion.core.legionary import Legionary, LegionaryStatus, MAX_CONSECUTIVE_FAILURES
+from centurion.core.legionary import MAX_CONSECUTIVE_FAILURES, Legionary, LegionaryStatus
 from centurion.core.session_registry import SessionRegistry
 
 
@@ -99,7 +98,7 @@ async def test_legionary_timeout_raises_task_timeout_error(mock_agent_type):
     leg.handle = await mock_agent_type.spawn(leg.id, "/tmp", {})
 
     # Mock send_task to raise asyncio.TimeoutError
-    mock_agent_type.send_task = AsyncMock(side_effect=asyncio.TimeoutError())
+    mock_agent_type.send_task = AsyncMock(side_effect=TimeoutError())
 
     with pytest.raises(TaskTimeoutError) as exc_info:
         await leg.execute("task-timeout", "This will time out", timeout=5.0)
@@ -185,6 +184,7 @@ async def test_legionary_failed_status_on_non_retryable_error(mock_agent_type):
 # ---------------------------------------------------------------------------
 # to_dict with session_registry
 # ---------------------------------------------------------------------------
+
 
 class TestToDictCloseableFields:
     def test_to_dict_without_registry(self, mock_agent_type):

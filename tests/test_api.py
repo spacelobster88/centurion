@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
 
 import pytest
@@ -104,7 +103,7 @@ async def test_list_legions(client):
     assert resp.status_code == 200
     data = resp.json()
     assert len(data) == 2
-    ids = {l["legion_id"] for l in data}
+    ids = {leg["legion_id"] for leg in data}
     assert ids == {"la", "lb"}
 
 

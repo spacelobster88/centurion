@@ -6,39 +6,40 @@ Tests all 17 MCP tools, verifying:
 - Error handling for ConnectError, TimeoutException, HTTPStatusError
 """
 
+from unittest.mock import MagicMock, patch
+
 import httpx
 import pytest
-from unittest.mock import MagicMock, patch
 
 from centurion.mcp.tools import (
     API_BASE,
-    _request,
+    _delete,
     _get,
     _post,
-    _delete,
-    fleet_status,
-    hardware_status,
-    raise_legion,
-    list_legions,
-    get_legion,
-    disband_legion,
+    _request,
     add_century,
-    get_century,
-    scale_century,
-    remove_century,
-    submit_task,
-    submit_batch,
-    get_task,
     cancel_task,
-    list_legionaries,
+    disband_legion,
+    fleet_status,
+    get_century,
+    get_legion,
     get_legionary,
+    get_task,
+    hardware_status,
     list_agent_types,
+    list_legionaries,
+    list_legions,
+    raise_legion,
+    remove_century,
+    scale_century,
+    submit_batch,
+    submit_task,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def mock_response():
@@ -61,40 +62,54 @@ def patch_request(mock_response):
 # Helper / internal function tests
 # ---------------------------------------------------------------------------
 
+
 class TestRequestHelper:
     """Tests for _request, _get, _post, _delete helpers."""
 
     def test_request_calls_httpx_with_correct_args(self, patch_request):
         result = _request("GET", "/some/path")
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/some/path", timeout=30,
+            "GET",
+            f"{API_BASE}/some/path",
+            timeout=30,
         )
         assert result == {"ok": True}
 
     def test_request_with_custom_timeout(self, patch_request):
         _request("POST", "/path", timeout=60, json={"x": 1})
         patch_request.assert_called_once_with(
-            "POST", f"{API_BASE}/path", timeout=60, json={"x": 1},
+            "POST",
+            f"{API_BASE}/path",
+            timeout=60,
+            json={"x": 1},
         )
 
     def test_get_delegates_to_request(self, patch_request):
         result = _get("/test", params={"a": "1"})
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/test", timeout=30, params={"a": "1"},
+            "GET",
+            f"{API_BASE}/test",
+            timeout=30,
+            params={"a": "1"},
         )
         assert result == {"ok": True}
 
     def test_post_delegates_to_request(self, patch_request):
         result = _post("/test", json={"key": "val"})
         patch_request.assert_called_once_with(
-            "POST", f"{API_BASE}/test", timeout=30, json={"key": "val"},
+            "POST",
+            f"{API_BASE}/test",
+            timeout=30,
+            json={"key": "val"},
         )
         assert result == {"ok": True}
 
     def test_delete_delegates_to_request(self, patch_request):
         result = _delete("/test")
         patch_request.assert_called_once_with(
-            "DELETE", f"{API_BASE}/test", timeout=30,
+            "DELETE",
+            f"{API_BASE}/test",
+            timeout=30,
         )
         assert result == {"ok": True}
 
@@ -102,6 +117,7 @@ class TestRequestHelper:
 # ---------------------------------------------------------------------------
 # Error handling tests
 # ---------------------------------------------------------------------------
+
 
 class TestErrorHandling:
     """Tests for _request error handling (ConnectError, Timeout, HTTPStatusError)."""
@@ -150,13 +166,16 @@ class TestErrorHandling:
 # Fleet tools
 # ---------------------------------------------------------------------------
 
-class TestFleetTools:
 
+class TestFleetTools:
     def test_fleet_status(self, patch_request, mock_response):
         mock_response.json.return_value = {"legions": 2, "centuries": 5}
         result = fleet_status()
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/status", timeout=30, params=None,
+            "GET",
+            f"{API_BASE}/status",
+            timeout=30,
+            params=None,
         )
         assert result == {"legions": 2, "centuries": 5}
 
@@ -164,7 +183,10 @@ class TestFleetTools:
         mock_response.json.return_value = {"cpu": "80%", "memory": "4GB"}
         result = hardware_status()
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/hardware", timeout=30, params=None,
+            "GET",
+            f"{API_BASE}/hardware",
+            timeout=30,
+            params=None,
         )
         assert result == {"cpu": "80%", "memory": "4GB"}
 
@@ -173,12 +195,14 @@ class TestFleetTools:
 # Legion tools
 # ---------------------------------------------------------------------------
 
-class TestLegionTools:
 
+class TestLegionTools:
     def test_raise_legion_minimal(self, patch_request):
         result = raise_legion(name="alpha")
         patch_request.assert_called_once_with(
-            "POST", f"{API_BASE}/legions", timeout=30,
+            "POST",
+            f"{API_BASE}/legions",
+            timeout=30,
             json={"name": "alpha"},
         )
         assert result == {"ok": True}
@@ -215,20 +239,28 @@ class TestLegionTools:
         mock_response.json.return_value = [{"id": "leg-1"}, {"id": "leg-2"}]
         result = list_legions()
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/legions", timeout=30, params=None,
+            "GET",
+            f"{API_BASE}/legions",
+            timeout=30,
+            params=None,
         )
         assert len(result) == 2
 
     def test_get_legion(self, patch_request):
         get_legion("leg-abc")
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/legions/leg-abc", timeout=30, params=None,
+            "GET",
+            f"{API_BASE}/legions/leg-abc",
+            timeout=30,
+            params=None,
         )
 
     def test_disband_legion(self, patch_request):
         disband_legion("leg-xyz")
         patch_request.assert_called_once_with(
-            "DELETE", f"{API_BASE}/legions/leg-xyz", timeout=30,
+            "DELETE",
+            f"{API_BASE}/legions/leg-xyz",
+            timeout=30,
         )
 
 
@@ -236,8 +268,8 @@ class TestLegionTools:
 # Century tools
 # ---------------------------------------------------------------------------
 
-class TestCenturyTools:
 
+class TestCenturyTools:
     def test_add_century_minimal(self, patch_request):
         add_century(legion_id="leg-1")
         call_kwargs = patch_request.call_args
@@ -284,20 +316,27 @@ class TestCenturyTools:
     def test_get_century(self, patch_request):
         get_century("cent-42")
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/centuries/cent-42", timeout=30, params=None,
+            "GET",
+            f"{API_BASE}/centuries/cent-42",
+            timeout=30,
+            params=None,
         )
 
     def test_scale_century(self, patch_request):
         scale_century("cent-42", target_count=5)
         patch_request.assert_called_once_with(
-            "POST", f"{API_BASE}/centuries/cent-42/scale", timeout=30,
+            "POST",
+            f"{API_BASE}/centuries/cent-42/scale",
+            timeout=30,
             json={"target_count": 5},
         )
 
     def test_remove_century(self, patch_request):
         remove_century("cent-42")
         patch_request.assert_called_once_with(
-            "DELETE", f"{API_BASE}/centuries/cent-42", timeout=30,
+            "DELETE",
+            f"{API_BASE}/centuries/cent-42",
+            timeout=30,
         )
 
 
@@ -305,8 +344,8 @@ class TestCenturyTools:
 # Task tools
 # ---------------------------------------------------------------------------
 
-class TestTaskTools:
 
+class TestTaskTools:
     def test_submit_task_minimal(self, patch_request):
         submit_task(century_id="cent-1", prompt="Do work")
         call_kwargs = patch_request.call_args
@@ -361,13 +400,19 @@ class TestTaskTools:
     def test_get_task(self, patch_request):
         get_task("task-xyz")
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/tasks/task-xyz", timeout=30, params=None,
+            "GET",
+            f"{API_BASE}/tasks/task-xyz",
+            timeout=30,
+            params=None,
         )
 
     def test_cancel_task(self, patch_request):
         cancel_task("task-xyz")
         patch_request.assert_called_once_with(
-            "POST", f"{API_BASE}/tasks/task-xyz/cancel", timeout=30, json=None,
+            "POST",
+            f"{API_BASE}/tasks/task-xyz/cancel",
+            timeout=30,
+            json=None,
         )
 
 
@@ -375,20 +420,26 @@ class TestTaskTools:
 # Legionary tools
 # ---------------------------------------------------------------------------
 
-class TestLegionaryTools:
 
+class TestLegionaryTools:
     def test_list_legionaries(self, patch_request, mock_response):
         mock_response.json.return_value = [{"id": "leg-inst-1"}, {"id": "leg-inst-2"}]
         result = list_legionaries("cent-5")
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/centuries/cent-5/legionaries", timeout=30, params=None,
+            "GET",
+            f"{API_BASE}/centuries/cent-5/legionaries",
+            timeout=30,
+            params=None,
         )
         assert len(result) == 2
 
     def test_get_legionary(self, patch_request):
         get_legionary("lgn-42")
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/legionaries/lgn-42", timeout=30, params=None,
+            "GET",
+            f"{API_BASE}/legionaries/lgn-42",
+            timeout=30,
+            params=None,
         )
 
 
@@ -396,13 +447,16 @@ class TestLegionaryTools:
 # Agent type tools
 # ---------------------------------------------------------------------------
 
-class TestAgentTypeTools:
 
+class TestAgentTypeTools:
     def test_list_agent_types(self, patch_request, mock_response):
         mock_response.json.return_value = {"claude_cli": {"class": "ClaudeCLI"}}
         result = list_agent_types()
         patch_request.assert_called_once_with(
-            "GET", f"{API_BASE}/agent-types", timeout=30, params=None,
+            "GET",
+            f"{API_BASE}/agent-types",
+            timeout=30,
+            params=None,
         )
         assert "claude_cli" in result
 
@@ -410,6 +464,7 @@ class TestAgentTypeTools:
 # ---------------------------------------------------------------------------
 # Parametrized tests for all GET-based tools (method and path)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "tool_func, args, expected_method, expected_path_suffix",
@@ -436,9 +491,7 @@ class TestAgentTypeTools:
         "list_agent_types",
     ],
 )
-def test_get_tools_method_and_path(
-    patch_request, tool_func, args, expected_method, expected_path_suffix
-):
+def test_get_tools_method_and_path(patch_request, tool_func, args, expected_method, expected_path_suffix):
     tool_func(**args)
     call_args = patch_request.call_args[0]
     assert call_args[0] == expected_method
@@ -453,9 +506,7 @@ def test_get_tools_method_and_path(
     ],
     ids=["disband_legion", "remove_century"],
 )
-def test_delete_tools_method_and_path(
-    patch_request, tool_func, args, expected_method, expected_path_suffix
-):
+def test_delete_tools_method_and_path(patch_request, tool_func, args, expected_method, expected_path_suffix):
     tool_func(**args)
     call_args = patch_request.call_args[0]
     assert call_args[0] == expected_method
@@ -481,9 +532,7 @@ def test_delete_tools_method_and_path(
         "cancel_task",
     ],
 )
-def test_post_tools_method_and_path(
-    patch_request, tool_func, args, expected_path_suffix
-):
+def test_post_tools_method_and_path(patch_request, tool_func, args, expected_path_suffix):
     tool_func(**args)
     call_args = patch_request.call_args[0]
     assert call_args[0] == "POST"
@@ -493,6 +542,7 @@ def test_post_tools_method_and_path(
 # ---------------------------------------------------------------------------
 # Parametrized error handling across representative tools
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "tool_func, args",
@@ -505,7 +555,6 @@ def test_post_tools_method_and_path(
     ids=["fleet_status", "raise_legion", "disband_legion", "submit_task"],
 )
 class TestErrorsAcrossTools:
-
     def test_connect_error(self, tool_func, args):
         with patch("centurion.mcp.tools.httpx.request", side_effect=httpx.ConnectError("refused")):
             result = tool_func(**args)
@@ -534,8 +583,8 @@ class TestErrorsAcrossTools:
 # API_BASE configuration
 # ---------------------------------------------------------------------------
 
-class TestApiBaseConfig:
 
+class TestApiBaseConfig:
     def test_default_api_base(self):
         assert API_BASE == "http://localhost:8100/api/centurion"
 

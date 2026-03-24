@@ -2,23 +2,21 @@
 
 from __future__ import annotations
 
-import os
 import time
 from unittest.mock import MagicMock
 
-import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from centurion.api.router import health_router, router, _build_recommended_actions
-from centurion.api.schemas import HealthResponse, ReadinessResponse, ComponentStatus
+from centurion.api.router import _build_recommended_actions, health_router, router
+from centurion.api.schemas import ComponentStatus, HealthResponse, ReadinessResponse
 from centurion.config import CenturionConfig
 from centurion.core.session_registry import SessionRegistry
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_app(**state_attrs) -> FastAPI:
     """Create a minimal FastAPI app with health_router and optional state."""
@@ -40,7 +38,7 @@ def _mock_engine(
     has_db: bool = False,
 ) -> MagicMock:
     """Build a MagicMock that satisfies the readiness probe checks."""
-    from centurion.core.scheduler import SystemResources, MemoryPressureLevel
+    from centurion.core.scheduler import MemoryPressureLevel, SystemResources
 
     engine = MagicMock()
     engine._shutting_down = shutting_down
@@ -76,6 +74,7 @@ def _mock_engine(
 # 1. Liveness — GET /health
 # ---------------------------------------------------------------------------
 
+
 class TestHealthLiveness:
     def test_health_returns_ok(self):
         """GET /health returns 200 with {"status": "ok"}."""
@@ -95,6 +94,7 @@ class TestHealthLiveness:
 # ---------------------------------------------------------------------------
 # 2. Readiness — GET /health/ready (no engine)
 # ---------------------------------------------------------------------------
+
 
 class TestHealthReadinessNoEngine:
     def test_health_ready_without_engine(self):
@@ -123,6 +123,7 @@ class TestHealthReadinessNoEngine:
 # ---------------------------------------------------------------------------
 # 3. Readiness — GET /health/ready (engine present)
 # ---------------------------------------------------------------------------
+
 
 class TestHealthReadinessWithEngine:
     def test_health_ready_with_engine(self):
@@ -196,6 +197,7 @@ class TestHealthReadinessWithEngine:
 # 4. Config — shutdown_timeout and event_buffer_size
 # ---------------------------------------------------------------------------
 
+
 class TestConfigEnvVars:
     def test_shutdown_timeout_default(self):
         """CenturionConfig.shutdown_timeout defaults to 60."""
@@ -224,6 +226,7 @@ class TestConfigEnvVars:
 # 5. Engine — _shutting_down flag
 # ---------------------------------------------------------------------------
 
+
 class TestEngineShuttingDownFlag:
     def test_engine_has_shutting_down_flag(self):
         """Centurion.__init__ sets _shutting_down = False."""
@@ -235,7 +238,7 @@ class TestEngineShuttingDownFlag:
 
     def test_engine_shutdown_timeout_from_config(self):
         """Engine uses config.shutdown_timeout during shutdown."""
-        config = CenturionConfig()
+        CenturionConfig()
         config_with_timeout = CenturionConfig()
         # Verify the engine stores the config and the timeout is accessible
         from centurion.core.engine import Centurion
@@ -247,6 +250,7 @@ class TestEngineShuttingDownFlag:
 # ---------------------------------------------------------------------------
 # 6. Schema models
 # ---------------------------------------------------------------------------
+
 
 class TestSchemaModels:
     def test_component_status_ok(self):
@@ -301,6 +305,7 @@ class TestSchemaModels:
 # 7. Readiness endpoint includes new scheduler fields
 # ---------------------------------------------------------------------------
 
+
 class TestReadinessSchedulerNewFields:
     """GET /health/ready scheduler component includes new RAM fields."""
 
@@ -311,7 +316,8 @@ class TestReadinessSchedulerNewFields:
         ram_compressor_mb=512,
         memory_pressure_value="normal",
     ):
-        from centurion.core.scheduler import SystemResources, MemoryPressureLevel
+        from centurion.core.scheduler import MemoryPressureLevel, SystemResources
+
         engine = _mock_engine(has_db=True, active_agents=2, recommended_max=10)
         # Make probe_system return a real SystemResources with new fields
         resources = SystemResources(
@@ -351,6 +357,7 @@ class TestReadinessSchedulerNewFields:
 # 8. Hardware endpoint — recommended_actions
 # ---------------------------------------------------------------------------
 
+
 def _make_hardware_app(**state_attrs) -> FastAPI:
     """Create a FastAPI app with both health_router and router for hardware endpoint."""
     app = FastAPI()
@@ -366,86 +373,77 @@ class TestBuildRecommendedActions:
 
     def test_normal_pressure_returns_empty(self):
         from centurion.core.scheduler import MemoryPressureLevel
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.NORMAL, session_registry=None, scheduler=None
-        )
+
+        actions = _build_recommended_actions(MemoryPressureLevel.NORMAL, session_registry=None, scheduler=None)
         assert actions == []
 
     def test_warn_pressure_no_registry_returns_batch_suggestion(self):
         from centurion.core.scheduler import MemoryPressureLevel
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.WARN, session_registry=None, scheduler=None
-        )
+
+        actions = _build_recommended_actions(MemoryPressureLevel.WARN, session_registry=None, scheduler=None)
         # Should have at least a reduce batch size suggestion
         texts = [a for a in actions if "batch" in a.lower()]
         assert len(texts) >= 1
 
     def test_warn_pressure_with_closeable_sessions(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         registry = SessionRegistry()
         registry.register_session("s1", parent_id=None, session_type="interactive")
         registry.session_meta["s1"].last_active = time.time() - 600
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.WARN, session_registry=registry, scheduler=None
-        )
+        actions = _build_recommended_actions(MemoryPressureLevel.WARN, session_registry=registry, scheduler=None)
         close_actions = [a for a in actions if "s1" in a]
         assert len(close_actions) >= 1, f"Expected action for session s1, got: {actions}"
 
     def test_warn_pressure_skips_pinned_sessions(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         registry = SessionRegistry()
         registry.register_session("pinned-1", parent_id=None, session_type="interactive", pinned=True)
         registry.session_meta["pinned-1"].last_active = time.time() - 600
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.WARN, session_registry=registry, scheduler=None
-        )
+        actions = _build_recommended_actions(MemoryPressureLevel.WARN, session_registry=registry, scheduler=None)
         close_actions = [a for a in actions if "pinned-1" in a]
         assert len(close_actions) == 0, "Pinned sessions should not appear in recommendations"
 
     def test_warn_pressure_skips_sessions_with_bg_children(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         registry = SessionRegistry()
         registry.register_session("parent-1", parent_id=None, session_type="interactive")
         registry.register_session("child-1", parent_id="parent-1", session_type="background")
         registry.session_meta["parent-1"].last_active = time.time() - 600
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.WARN, session_registry=registry, scheduler=None
-        )
+        actions = _build_recommended_actions(MemoryPressureLevel.WARN, session_registry=registry, scheduler=None)
         parent_actions = [a for a in actions if "parent-1" in a]
         assert len(parent_actions) == 0, "Sessions with bg children should not appear"
 
     def test_critical_pressure_includes_purge(self):
         from centurion.core.scheduler import MemoryPressureLevel
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.CRITICAL, session_registry=None, scheduler=None
-        )
+
+        actions = _build_recommended_actions(MemoryPressureLevel.CRITICAL, session_registry=None, scheduler=None)
         purge_actions = [a for a in actions if "purge" in a.lower()]
         assert len(purge_actions) >= 1
 
     def test_critical_pressure_includes_background_tasks_warning(self):
         from centurion.core.scheduler import MemoryPressureLevel
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.CRITICAL, session_registry=None, scheduler=None
-        )
+
+        actions = _build_recommended_actions(MemoryPressureLevel.CRITICAL, session_registry=None, scheduler=None)
         bg_actions = [a for a in actions if "background" in a.lower()]
         assert len(bg_actions) >= 1
 
     def test_critical_pressure_includes_batch_reduction(self):
         from centurion.core.scheduler import MemoryPressureLevel
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.CRITICAL, session_registry=None, scheduler=None
-        )
+
+        actions = _build_recommended_actions(MemoryPressureLevel.CRITICAL, session_registry=None, scheduler=None)
         batch_actions = [a for a in actions if "batch" in a.lower()]
         assert len(batch_actions) >= 1
 
     def test_closeable_session_action_includes_idle_seconds(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         registry = SessionRegistry()
         registry.register_session("idle-sess", parent_id=None, session_type="interactive")
         registry.session_meta["idle-sess"].last_active = time.time() - 1800
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.WARN, session_registry=registry, scheduler=None
-        )
+        actions = _build_recommended_actions(MemoryPressureLevel.WARN, session_registry=registry, scheduler=None)
         idle_actions = [a for a in actions if "idle-sess" in a]
         assert len(idle_actions) == 1
         # Should mention idle time
@@ -456,7 +454,8 @@ class TestHardwareRecommendedActions:
     """Integration tests: GET /api/centurion/hardware includes recommended_actions."""
 
     def _mock_engine_with_pressure(self, pressure_value="normal", registry=None):
-        from centurion.core.scheduler import SystemResources, MemoryPressureLevel
+        from centurion.core.scheduler import MemoryPressureLevel, SystemResources
+
         engine = MagicMock()
         engine._shutting_down = False
         engine.legions = {}
@@ -576,6 +575,7 @@ class TestHardwareRecommendedActions:
 # 9. Integration: session registration -> pressure -> recommended_actions
 # ---------------------------------------------------------------------------
 
+
 class TestIntegrationSessionPressureActions:
     """Full flow: register sessions, simulate pressure, check actions."""
 
@@ -590,15 +590,11 @@ class TestIntegrationSessionPressureActions:
         registry.session_meta["idle-solo"].last_active = time.time() - 300
 
         # 2. Under normal pressure: no actions
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.NORMAL, session_registry=registry, scheduler=None
-        )
+        actions = _build_recommended_actions(MemoryPressureLevel.NORMAL, session_registry=registry, scheduler=None)
         assert actions == []
 
         # 3. Under warn pressure: idle-solo recommended, parent-1 is not (has bg child)
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.WARN, session_registry=registry, scheduler=None
-        )
+        actions = _build_recommended_actions(MemoryPressureLevel.WARN, session_registry=registry, scheduler=None)
         action_text = " ".join(actions)
         assert "idle-solo" in action_text
         assert "parent-1" not in action_text
@@ -607,9 +603,7 @@ class TestIntegrationSessionPressureActions:
 
         # 4. Terminate bg-child-1 -> now parent-1 becomes closeable
         registry.terminate_session("bg-child-1")
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.WARN, session_registry=registry, scheduler=None
-        )
+        actions = _build_recommended_actions(MemoryPressureLevel.WARN, session_registry=registry, scheduler=None)
         action_text = " ".join(actions)
         assert "parent-1" in action_text
 
@@ -622,23 +616,17 @@ class TestIntegrationSessionPressureActions:
         registry.session_meta["s1"].last_active = time.time() - 600
 
         # Normal: empty
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.NORMAL, session_registry=registry, scheduler=None
-        )
+        actions = _build_recommended_actions(MemoryPressureLevel.NORMAL, session_registry=registry, scheduler=None)
         assert actions == []
 
         # Warn: has close + batch
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.WARN, session_registry=registry, scheduler=None
-        )
+        actions = _build_recommended_actions(MemoryPressureLevel.WARN, session_registry=registry, scheduler=None)
         assert any("s1" in a for a in actions)
         assert any("batch" in a.lower() for a in actions)
         assert not any("purge" in a.lower() for a in actions)
 
         # Critical: has close + batch=1 + purge + background warning
-        actions = _build_recommended_actions(
-            MemoryPressureLevel.CRITICAL, session_registry=registry, scheduler=None
-        )
+        actions = _build_recommended_actions(MemoryPressureLevel.CRITICAL, session_registry=registry, scheduler=None)
         assert any("s1" in a for a in actions)
         assert any("batch" in a.lower() and "1" in a for a in actions)
         assert any("purge" in a.lower() for a in actions)

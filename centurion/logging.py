@@ -11,7 +11,7 @@ import logging
 import os
 import sys
 import traceback
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -24,12 +24,32 @@ class CenturionJSONFormatter(logging.Formatter):
 
     # Fields from LogRecord that are part of the fixed schema and should
     # not appear in the extra context bucket.
-    RESERVED_ATTRS = frozenset({
-        "args", "created", "exc_info", "exc_text", "filename", "funcName",
-        "levelname", "levelno", "lineno", "message", "module", "msecs",
-        "msg", "name", "pathname", "process", "processName", "relativeCreated",
-        "stack_info", "thread", "threadName", "taskName",
-    })
+    RESERVED_ATTRS = frozenset(
+        {
+            "args",
+            "created",
+            "exc_info",
+            "exc_text",
+            "filename",
+            "funcName",
+            "levelname",
+            "levelno",
+            "lineno",
+            "message",
+            "module",
+            "msecs",
+            "msg",
+            "name",
+            "pathname",
+            "process",
+            "processName",
+            "relativeCreated",
+            "stack_info",
+            "thread",
+            "threadName",
+            "taskName",
+        }
+    )
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry: dict[str, Any] = {
@@ -42,10 +62,7 @@ class CenturionJSONFormatter(logging.Formatter):
 
         # Merge extra context — any attribute on the record that is not
         # part of the standard LogRecord fields.
-        extra = {
-            k: v for k, v in record.__dict__.items()
-            if k not in self.RESERVED_ATTRS and not k.startswith("_")
-        }
+        extra = {k: v for k, v in record.__dict__.items() if k not in self.RESERVED_ATTRS and not k.startswith("_")}
         if extra:
             log_entry["context"] = extra
 
@@ -66,7 +83,7 @@ class CenturionJSONFormatter(logging.Formatter):
     @staticmethod
     def _iso_timestamp(record: logging.LogRecord) -> str:
         """ISO-8601 timestamp with millisecond precision and UTC offset."""
-        dt = datetime.fromtimestamp(record.created, tz=timezone.utc)
+        dt = datetime.fromtimestamp(record.created, tz=UTC)
         return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{int(record.msecs):03d}Z"
 
 
@@ -77,11 +94,11 @@ class CenturionDevFormatter(logging.Formatter):
     """
 
     COLORS = {
-        "DEBUG":    "\033[36m",   # cyan
-        "INFO":     "\033[32m",   # green
-        "WARNING":  "\033[33m",   # yellow
-        "ERROR":    "\033[31m",   # red
-        "CRITICAL": "\033[1;31m", # bold red
+        "DEBUG": "\033[36m",  # cyan
+        "INFO": "\033[32m",  # green
+        "WARNING": "\033[33m",  # yellow
+        "ERROR": "\033[31m",  # red
+        "CRITICAL": "\033[1;31m",  # bold red
     }
     RESET = "\033[0m"
     DIM = "\033[2m"
@@ -98,17 +115,14 @@ class CenturionDevFormatter(logging.Formatter):
 
         # Collect extra context
         reserved = logging.LogRecord("", 0, "", 0, "", (), None).__dict__.keys()
-        extras = {
-            k: v for k, v in record.__dict__.items()
-            if k not in reserved and not k.startswith("_")
-        }
+        extras = {k: v for k, v in record.__dict__.items() if k not in reserved and not k.startswith("_")}
         extra_str = ""
         if extras:
             pairs = " ".join(f"{k}={v}" for k, v in extras.items())
             extra_str = f" {self.DIM}[{pairs}]{self.RESET}"
 
         # Timestamp: HH:MM:SS.mmm
-        dt = datetime.fromtimestamp(record.created, tz=timezone.utc)
+        dt = datetime.fromtimestamp(record.created, tz=UTC)
         ts = dt.strftime("%H:%M:%S.") + f"{int(record.msecs):03d}"
 
         line = (

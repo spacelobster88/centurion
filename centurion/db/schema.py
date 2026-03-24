@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
-import sqlite3
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import sqlite3
 
 # ---------------------------------------------------------------------------
 # Table DDL
@@ -111,7 +113,7 @@ TABLES: list[str] = [
 
 def init_db(conn: sqlite3.Connection | Any) -> None:
     """Create all tables and indexes. Works with both sqlite3.Connection and aiosqlite proxies."""
-    cursor = conn.cursor() if hasattr(conn, "cursor") else conn
+    conn.cursor() if hasattr(conn, "cursor") else conn
     for ddl in TABLES:
         conn.execute(ddl)
     for idx in CREATE_INDEXES:

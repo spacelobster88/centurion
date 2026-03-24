@@ -6,12 +6,12 @@ import time
 
 import pytest
 
-from centurion.core.session_registry import SessionMeta, SessionRegistry
-
+from centurion.core.session_registry import SessionRegistry
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_registry() -> SessionRegistry:
     return SessionRegistry()
@@ -20,6 +20,7 @@ def _make_registry() -> SessionRegistry:
 # ---------------------------------------------------------------------------
 # register_session
 # ---------------------------------------------------------------------------
+
 
 class TestRegisterSession:
     def test_register_basic(self):
@@ -54,6 +55,7 @@ class TestRegisterSession:
 # register_child (convenience method)
 # ---------------------------------------------------------------------------
 
+
 class TestRegisterChild:
     def test_register_child_creates_relationship(self):
         reg = _make_registry()
@@ -79,6 +81,7 @@ class TestRegisterChild:
 # ---------------------------------------------------------------------------
 # get_children / get_parent
 # ---------------------------------------------------------------------------
+
 
 class TestGetChildrenParent:
     def test_get_children_empty(self):
@@ -111,6 +114,7 @@ class TestGetChildrenParent:
 # ---------------------------------------------------------------------------
 # is_orphan
 # ---------------------------------------------------------------------------
+
 
 class TestIsOrphan:
     def test_not_orphan_with_live_parent(self):
@@ -148,6 +152,7 @@ class TestIsOrphan:
 # unregister_session
 # ---------------------------------------------------------------------------
 
+
 class TestUnregisterSession:
     def test_unregister_removes_meta(self):
         reg = _make_registry()
@@ -180,6 +185,7 @@ class TestUnregisterSession:
 # terminate_session
 # ---------------------------------------------------------------------------
 
+
 class TestTerminateSession:
     def test_terminate_sets_status(self):
         reg = _make_registry()
@@ -197,6 +203,7 @@ class TestTerminateSession:
 # ---------------------------------------------------------------------------
 # update_last_active
 # ---------------------------------------------------------------------------
+
 
 class TestUpdateLastActive:
     def test_updates_timestamp(self):
@@ -217,6 +224,7 @@ class TestUpdateLastActive:
 # ---------------------------------------------------------------------------
 # get_all_sessions
 # ---------------------------------------------------------------------------
+
 
 class TestGetAllSessions:
     def test_empty(self):
@@ -245,6 +253,7 @@ class TestGetAllSessions:
 # ---------------------------------------------------------------------------
 # closeable_info
 # ---------------------------------------------------------------------------
+
 
 class TestCloseableInfo:
     def test_no_children_is_closeable(self):
@@ -336,6 +345,7 @@ class TestCloseableInfo:
 # ---------------------------------------------------------------------------
 # Deep nesting & relationship cascades
 # ---------------------------------------------------------------------------
+
 
 class TestDeepNesting:
     def test_grandchildren(self):

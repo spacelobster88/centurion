@@ -6,6 +6,7 @@ Singleton per process. Manages legions, scheduling, and the event bus.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import uuid
 
@@ -122,9 +123,7 @@ class Centurion:
             raise KeyError(f"Legion {legion_id!r} not found")
         return legion
 
-    async def broadcast(
-        self, message: str, target: str = "all", target_id: str | None = None
-    ) -> dict:
+    async def broadcast(self, message: str, target: str = "all", target_id: str | None = None) -> dict:
         """Broadcast a message to agents.
 
         Args:
@@ -202,7 +201,7 @@ class Centurion:
             "total_legions": len(self.legions),
             "total_centuries": total_centuries,
             "total_legionaries": total_legionaries,
-            "legions": {lid: l.status_report() for lid, l in self.legions.items()},
+            "legions": {lid: leg.status_report() for lid, leg in self.legions.items()},
             "hardware": self.scheduler.to_dict(),
         }
 
@@ -234,15 +233,13 @@ class Centurion:
         logger.info("shutdown: phase 2 — draining legions")
         legion_ids = list(self.legions.keys())
         for legion_id in legion_ids:
-            try:
+            with contextlib.suppress(KeyError):
                 await self.disband_legion(legion_id)
-            except KeyError:
-                pass
 
         # Wait for any remaining in-progress tasks with configurable timeout
         try:
             await asyncio.wait_for(self._drain_all(), timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("shutdown: drain timed out after %ss", timeout)
 
         # Terminate any remaining legions

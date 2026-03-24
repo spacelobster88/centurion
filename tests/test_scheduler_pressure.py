@@ -1,9 +1,7 @@
 """TDD RED phase: tests for memory pressure detection (eng-1, eng-3)."""
 
 import time
-from unittest.mock import patch, MagicMock
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from centurion.config import CenturionConfig
 from centurion.core.scheduler import (
@@ -16,12 +14,14 @@ from centurion.core.scheduler import (
 class TestMemoryPressureLevelEnum:
     def test_enum_exists(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         assert hasattr(MemoryPressureLevel, "NORMAL")
         assert hasattr(MemoryPressureLevel, "WARN")
         assert hasattr(MemoryPressureLevel, "CRITICAL")
 
     def test_enum_values(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         assert MemoryPressureLevel.NORMAL.value == "normal"
         assert MemoryPressureLevel.WARN.value == "warn"
         assert MemoryPressureLevel.CRITICAL.value == "critical"
@@ -30,11 +30,13 @@ class TestMemoryPressureLevelEnum:
 class TestSystemResourcesPressureField:
     def test_default_pressure_is_normal(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         r = SystemResources()
         assert r.memory_pressure == MemoryPressureLevel.NORMAL
 
     def test_pressure_field_settable(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         r = SystemResources(memory_pressure=MemoryPressureLevel.CRITICAL)
         assert r.memory_pressure == MemoryPressureLevel.CRITICAL
 
@@ -42,6 +44,7 @@ class TestSystemResourcesPressureField:
 class TestMemoryPressureLevelMethod:
     def test_returns_normal_for_high_level(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         sched = CenturionScheduler(config=CenturionConfig())
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(stdout="4\n", returncode=0)
@@ -50,6 +53,7 @@ class TestMemoryPressureLevelMethod:
 
     def test_returns_warn_for_level_2(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         sched = CenturionScheduler(config=CenturionConfig())
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(stdout="2\n", returncode=0)
@@ -58,6 +62,7 @@ class TestMemoryPressureLevelMethod:
 
     def test_returns_critical_for_level_1(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         sched = CenturionScheduler(config=CenturionConfig())
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(stdout="1\n", returncode=0)
@@ -66,6 +71,7 @@ class TestMemoryPressureLevelMethod:
 
     def test_returns_normal_on_failure(self):
         from centurion.core.scheduler import MemoryPressureLevel
+
         sched = CenturionScheduler(config=CenturionConfig())
         with patch("subprocess.run", side_effect=Exception("fail")):
             result = sched._memory_pressure_level()
@@ -106,6 +112,7 @@ class TestToDictIncludesPressure:
 # eng-3: MemoryPressureLevel ordering support
 # ---------------------------------------------------------------------------
 
+
 class TestMemoryPressureLevelOrdering:
     """MemoryPressureLevel supports comparison so max() can pick the worse signal."""
 
@@ -133,6 +140,7 @@ class TestMemoryPressureLevelOrdering:
 # ---------------------------------------------------------------------------
 # eng-3: Compressor-aware _memory_pressure_level()
 # ---------------------------------------------------------------------------
+
 
 class TestCompressorAwarePressure:
     """_memory_pressure_level() combines kernel signal with compressor ratio."""
@@ -248,6 +256,7 @@ class TestCompressorAwarePressure:
 # eng-3: Ordering NotImplemented for non-MemoryPressureLevel comparisons
 # ---------------------------------------------------------------------------
 
+
 class TestMemoryPressureLevelOrderingNotImplemented:
     """Comparisons with non-MemoryPressureLevel types return NotImplemented."""
 
@@ -279,6 +288,7 @@ class TestMemoryPressureLevelOrderingNotImplemented:
 # ---------------------------------------------------------------------------
 # eng-3: Compressor boundary tests (exactly 30%, exactly 50%)
 # ---------------------------------------------------------------------------
+
 
 class TestCompressorBoundaryValues:
     """Test exact boundary conditions for compressor ratio thresholds."""

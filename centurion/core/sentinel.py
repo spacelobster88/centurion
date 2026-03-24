@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 # Configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class SentinelConfig:
     """Configurable thresholds for the sentinel service."""
@@ -46,6 +47,7 @@ class SentinelConfig:
 # ---------------------------------------------------------------------------
 # Kill metrics tracker
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class SentinelKillRecord:
@@ -79,9 +81,7 @@ class SentinelMetrics:
                 self._dry_run_kills += 1
             else:
                 self._total_kills += 1
-                self._kills_by_type[record.session_type] = (
-                    self._kills_by_type.get(record.session_type, 0) + 1
-                )
+                self._kills_by_type[record.session_type] = self._kills_by_type.get(record.session_type, 0) + 1
             self._last_kill = record
             self._recent_kills.append(record)
             # Keep last 50 kill records
@@ -152,6 +152,7 @@ def _kill_priority(session_type: str) -> int:
 # Sentinel service
 # ---------------------------------------------------------------------------
 
+
 class Sentinel:
     """Background sentinel that scans for and kills stale sessions.
 
@@ -196,8 +197,7 @@ class Sentinel:
         self._running = True
         self._task = asyncio.ensure_future(self._loop())
         logger.info(
-            "Sentinel started: scan_interval=%.0fs idle_threshold=%.0fs "
-            "max_runtime=%.0fs dry_run=%s",
+            "Sentinel started: scan_interval=%.0fs idle_threshold=%.0fs max_runtime=%.0fs dry_run=%s",
             self.config.scan_interval_seconds,
             self.config.idle_threshold_seconds,
             self.config.max_runtime_seconds,
@@ -273,9 +273,7 @@ class Sentinel:
                         info["reason"],
                     )
                     continue
-                stale_sessions.append(
-                    (session_id, meta, reason, idle_seconds, runtime_seconds)
-                )
+                stale_sessions.append((session_id, meta, reason, idle_seconds, runtime_seconds))
 
         # Sort by kill priority: interactive first, background last
         stale_sessions.sort(key=lambda s: _kill_priority(s[1].session_type))

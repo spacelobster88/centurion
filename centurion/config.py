@@ -27,14 +27,10 @@ class CenturionConfig:
     """Top-level engine configuration. Reads from env vars with fallbacks."""
 
     # Database
-    db_path: str = field(
-        default_factory=lambda: os.getenv("CENTURION_DB_PATH", "data/centurion.db")
-    )
+    db_path: str = field(default_factory=lambda: os.getenv("CENTURION_DB_PATH", "data/centurion.db"))
 
     # Session directories
-    session_base_dir: str = field(
-        default_factory=lambda: os.getenv("CENTURION_SESSION_DIR", "/tmp/centurion-sessions")
-    )
+    session_base_dir: str = field(default_factory=lambda: os.getenv("CENTURION_SESSION_DIR", "/tmp/centurion-sessions"))
 
     # Hardware limits
     max_agents_hard_limit: int = field(
@@ -49,9 +45,7 @@ class CenturionConfig:
     scale_down_idle_threshold: float = 60.0
 
     # Timeouts
-    default_task_timeout: float = field(
-        default_factory=lambda: float(os.getenv("CENTURION_TASK_TIMEOUT", "300"))
-    )
+    default_task_timeout: float = field(default_factory=lambda: float(os.getenv("CENTURION_TASK_TIMEOUT", "300")))
     agent_spawn_timeout: float = 30.0
 
     # Monitoring
@@ -59,30 +53,20 @@ class CenturionConfig:
     event_retention_days: int = 7
 
     # Claude CLI
-    claude_binary: str = field(
-        default_factory=lambda: os.getenv("CENTURION_CLAUDE_BIN", "claude")
-    )
+    claude_binary: str = field(default_factory=lambda: os.getenv("CENTURION_CLAUDE_BIN", "claude"))
     claude_skip_permissions: bool = True
 
     # Claude API
-    claude_model: str = field(
-        default_factory=lambda: os.getenv("CENTURION_CLAUDE_MODEL", "claude-sonnet-4-6")
-    )
+    claude_model: str = field(default_factory=lambda: os.getenv("CENTURION_CLAUDE_MODEL", "claude-sonnet-4-6"))
 
     # Shutdown
-    shutdown_timeout: float = field(
-        default_factory=lambda: float(os.getenv("CENTURION_SHUTDOWN_TIMEOUT", "60"))
-    )
+    shutdown_timeout: float = field(default_factory=lambda: float(os.getenv("CENTURION_SHUTDOWN_TIMEOUT", "60")))
 
     # Event buffer
-    event_buffer_size: int = field(
-        default_factory=lambda: int(os.getenv("CENTURION_EVENT_BUFFER_SIZE", "1000"))
-    )
+    event_buffer_size: int = field(default_factory=lambda: int(os.getenv("CENTURION_EVENT_BUFFER_SIZE", "1000")))
 
     # Sentinel (stale session reaper)
-    sentinel_enabled: bool = field(
-        default_factory=lambda: os.getenv("CENTURION_SENTINEL_ENABLED", "1") != "0"
-    )
+    sentinel_enabled: bool = field(default_factory=lambda: os.getenv("CENTURION_SENTINEL_ENABLED", "1") != "0")
     sentinel_scan_interval: float = field(
         default_factory=lambda: float(os.getenv("CENTURION_SENTINEL_INTERVAL", "300"))
     )
@@ -92,12 +76,8 @@ class CenturionConfig:
     sentinel_max_runtime: float = field(
         default_factory=lambda: float(os.getenv("CENTURION_SENTINEL_MAX_RUNTIME", "7200"))
     )
-    sentinel_dry_run: bool = field(
-        default_factory=lambda: os.getenv("CENTURION_SENTINEL_DRY_RUN", "0") == "1"
-    )
+    sentinel_dry_run: bool = field(default_factory=lambda: os.getenv("CENTURION_SENTINEL_DRY_RUN", "0") == "1")
 
     # Server
     host: str = "0.0.0.0"
-    port: int = field(
-        default_factory=lambda: int(os.getenv("CENTURION_PORT", "8100"))
-    )
+    port: int = field(default_factory=lambda: int(os.getenv("CENTURION_PORT", "8100")))

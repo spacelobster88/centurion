@@ -1,10 +1,14 @@
 import asyncio
+
 import pytest
+
 from centurion.agent_types.base import AgentResult, AgentType
 from centurion.config import ResourceRequirements, ResourceSpec
 
+
 class MockAgentType(AgentType):
     """Fast mock agent for testing -- no real subprocess."""
+
     name = "mock"
 
     def __init__(self, delay: float = 0.01, fail_rate: float = 0.0):
@@ -16,16 +20,21 @@ class MockAgentType(AgentType):
         return {"legionary_id": legionary_id}
 
     async def send_task(self, handle, task, timeout):
-        import random, time
+        import random
+        import time
+
         self._call_count += 1
         start = time.monotonic()
         await asyncio.sleep(self.delay)
         if random.random() < self.fail_rate:
-            return AgentResult(success=False, output="", error="Mock failure", duration_seconds=time.monotonic()-start)
-        return AgentResult(success=True, output=f"Mock result for: {task}", duration_seconds=time.monotonic()-start)
+            return AgentResult(
+                success=False, output="", error="Mock failure", duration_seconds=time.monotonic() - start
+            )
+        return AgentResult(success=True, output=f"Mock result for: {task}", duration_seconds=time.monotonic() - start)
 
     async def stream_output(self, handle):
-        return; yield
+        return
+        yield  # noqa: E702
 
     async def terminate(self, handle, graceful=True):
         pass
@@ -36,9 +45,11 @@ class MockAgentType(AgentType):
             limits=ResourceSpec(cpu_millicores=10, memory_mb=10),
         )
 
+
 @pytest.fixture
 def mock_agent_type():
     return MockAgentType()
+
 
 @pytest.fixture
 def failing_agent_type():

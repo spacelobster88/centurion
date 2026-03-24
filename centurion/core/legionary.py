@@ -2,21 +2,22 @@
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import Any
+from enum import StrEnum
+from typing import TYPE_CHECKING, Any
 
-from centurion.agent_types.base import AgentResult, AgentType
 from centurion.core.exceptions import AgentProcessError, TaskTimeoutError
+
+if TYPE_CHECKING:
+    from centurion.agent_types.base import AgentResult, AgentType
 
 logger = logging.getLogger(__name__)
 
 
-class LegionaryStatus(str, Enum):
+class LegionaryStatus(StrEnum):
     IDLE = "idle"
     BUSY = "busy"
     FAILED = "failed"
@@ -68,14 +69,24 @@ class Legionary:
                 self.consecutive_failures = 0
                 logger.info(
                     "Task completed",
-                    extra={"legionary_id": self.id, "task_id": task_id, "duration_s": round(duration, 3), "success": True},
+                    extra={
+                        "legionary_id": self.id,
+                        "task_id": task_id,
+                        "duration_s": round(duration, 3),
+                        "success": True,
+                    },
                 )
             else:
                 self.tasks_failed += 1
                 self.consecutive_failures += 1
                 logger.warning(
                     "Task failed",
-                    extra={"legionary_id": self.id, "task_id": task_id, "duration_s": round(duration, 3), "error": result.error},
+                    extra={
+                        "legionary_id": self.id,
+                        "task_id": task_id,
+                        "duration_s": round(duration, 3),
+                        "error": result.error,
+                    },
                 )
                 # Classify non-success results into typed exceptions
                 if result.exit_code is not None and result.exit_code != 0:
@@ -88,18 +99,23 @@ class Legionary:
                         )
             self.total_duration += result.duration_seconds
             return result
-        except asyncio.TimeoutError:
+        except TimeoutError as exc:
             duration = time.monotonic() - start_time
             self.tasks_failed += 1
             self.consecutive_failures += 1
             logger.warning(
                 "Task timed out",
-                extra={"legionary_id": self.id, "task_id": task_id, "duration_s": round(duration, 3), "timeout": timeout},
+                extra={
+                    "legionary_id": self.id,
+                    "task_id": task_id,
+                    "duration_s": round(duration, 3),
+                    "timeout": timeout,
+                },
             )
             raise TaskTimeoutError(
                 f"Task {task_id} timed out after {timeout}s",
                 timeout_seconds=timeout,
-            )
+            ) from exc
         except TaskTimeoutError:
             self.tasks_failed += 1
             self.consecutive_failures += 1
@@ -112,7 +128,12 @@ class Legionary:
                 self.status = LegionaryStatus.FAILED
             logger.warning(
                 "Task execution exception",
-                extra={"legionary_id": self.id, "task_id": task_id, "error_type": type(exc).__name__, "error": str(exc)},
+                extra={
+                    "legionary_id": self.id,
+                    "task_id": task_id,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                },
                 exc_info=True,
             )
             raise
@@ -123,7 +144,13 @@ class Legionary:
             self.status = LegionaryStatus.FAILED
             logger.warning(
                 "Task execution exception",
-                extra={"legionary_id": self.id, "task_id": task_id, "duration_s": round(duration, 3), "error_type": type(e).__name__, "error": str(e)},
+                extra={
+                    "legionary_id": self.id,
+                    "task_id": task_id,
+                    "duration_s": round(duration, 3),
+                    "error_type": type(e).__name__,
+                    "error": str(e),
+                },
                 exc_info=True,
             )
             raise AgentProcessError(
@@ -138,10 +165,12 @@ class Legionary:
 
     async def receive_broadcast(self, message: str) -> None:
         """Receive a broadcast message. Stores in message inbox."""
-        self.broadcasts.append({
-            "message": message,
-            "received_at": time.time(),
-        })
+        self.broadcasts.append(
+            {
+                "message": message,
+                "received_at": time.time(),
+            }
+        )
         logger.debug(
             "Broadcast received",
             extra={"legionary_id": self.id, "message_len": len(message)},

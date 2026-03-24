@@ -5,9 +5,8 @@ import asyncio
 import pytest
 
 from centurion.agent_types.registry import AgentTypeRegistry
-from centurion.core.century import Century, CenturyConfig
+from centurion.core.century import CenturyConfig
 from centurion.core.legion import Legion, LegionQuota
-
 from tests.conftest import MockAgentType
 
 
@@ -40,12 +39,12 @@ async def test_submit_batch_round_robin(mock_registry):
     """Batch submission distributes tasks round-robin across centuries."""
     legion = Legion(legion_id="legion-rr", name="Round Robin Legion")
 
-    cent_a = await legion.add_century(
+    await legion.add_century(
         "cent-a",
         CenturyConfig(agent_type_name="mock", min_legionaries=1, autoscale=False),
         mock_registry,
     )
-    cent_b = await legion.add_century(
+    await legion.add_century(
         "cent-b",
         CenturyConfig(agent_type_name="mock", min_legionaries=1, autoscale=False),
         mock_registry,

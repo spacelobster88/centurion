@@ -6,9 +6,9 @@ import pytest
 
 from centurion.config import CenturionConfig
 from centurion.core.scheduler import (
+    _HEADROOM_MULTIPLIERS,
     CenturionScheduler,
     MemoryPressureLevel,
-    _HEADROOM_MULTIPLIERS,
 )
 
 
@@ -136,9 +136,12 @@ class TestPressureLevelBoundaries:
         Per the enum docstring: 0.6 <= ratio < 0.85 → WARN.
         Kernel sysctl level 2 maps to WARN.
         """
-        with patch("centurion.core.scheduler.platform") as mock_platform, \
-             patch("centurion.core.scheduler.subprocess.run") as mock_run:
+        with (
+            patch("centurion.core.scheduler.platform") as mock_platform,
+            patch("centurion.core.scheduler.subprocess.run") as mock_run,
+        ):
             from unittest.mock import MagicMock
+
             mock_platform.system.return_value = "Darwin"
             mock_result = MagicMock()
             mock_result.stdout = "2\n"
@@ -152,9 +155,12 @@ class TestPressureLevelBoundaries:
         Per the enum docstring: ratio >= 0.85 → CRITICAL.
         Kernel sysctl level 1 maps to CRITICAL.
         """
-        with patch("centurion.core.scheduler.platform") as mock_platform, \
-             patch("centurion.core.scheduler.subprocess.run") as mock_run:
+        with (
+            patch("centurion.core.scheduler.platform") as mock_platform,
+            patch("centurion.core.scheduler.subprocess.run") as mock_run,
+        ):
             from unittest.mock import MagicMock
+
             mock_platform.system.return_value = "Darwin"
             mock_result = MagicMock()
             mock_result.stdout = "1\n"
@@ -164,9 +170,12 @@ class TestPressureLevelBoundaries:
 
     def test_boundary_just_below_0_60_is_normal(self):
         """Ratio below 0.60 → NORMAL. Kernel level >= 3 maps to NORMAL."""
-        with patch("centurion.core.scheduler.platform") as mock_platform, \
-             patch("centurion.core.scheduler.subprocess.run") as mock_run:
+        with (
+            patch("centurion.core.scheduler.platform") as mock_platform,
+            patch("centurion.core.scheduler.subprocess.run") as mock_run,
+        ):
             from unittest.mock import MagicMock
+
             mock_platform.system.return_value = "Darwin"
             mock_result = MagicMock()
             mock_result.stdout = "4\n"
@@ -176,9 +185,12 @@ class TestPressureLevelBoundaries:
 
     def test_kernel_level_boundary_at_2_is_warn(self):
         """Kernel level exactly 2 → WARN (the 0.60 boundary)."""
-        with patch("centurion.core.scheduler.platform") as mock_platform, \
-             patch("centurion.core.scheduler.subprocess.run") as mock_run:
+        with (
+            patch("centurion.core.scheduler.platform") as mock_platform,
+            patch("centurion.core.scheduler.subprocess.run") as mock_run,
+        ):
             from unittest.mock import MagicMock
+
             mock_platform.system.return_value = "Darwin"
             mock_result = MagicMock()
             mock_result.stdout = "2\n"
@@ -189,9 +201,12 @@ class TestPressureLevelBoundaries:
 
     def test_kernel_level_boundary_at_1_is_critical(self):
         """Kernel level exactly 1 → CRITICAL (the 0.85 boundary)."""
-        with patch("centurion.core.scheduler.platform") as mock_platform, \
-             patch("centurion.core.scheduler.subprocess.run") as mock_run:
+        with (
+            patch("centurion.core.scheduler.platform") as mock_platform,
+            patch("centurion.core.scheduler.subprocess.run") as mock_run,
+        ):
             from unittest.mock import MagicMock
+
             mock_platform.system.return_value = "Darwin"
             mock_result = MagicMock()
             mock_result.stdout = "1\n"
@@ -213,9 +228,7 @@ class TestToDict:
     )
     @patch.object(CenturionScheduler, "_ram_available_mb", return_value=8192)
     @patch.object(CenturionScheduler, "_ram_total_mb", return_value=16384)
-    def test_to_dict_returns_expected_top_level_keys(
-        self, _mock_total, _mock_avail, _mock_pressure, scheduler
-    ):
+    def test_to_dict_returns_expected_top_level_keys(self, _mock_total, _mock_avail, _mock_pressure, scheduler):
         """to_dict() returns dict with 'system', 'allocated', 'recommended_max_agents'."""
         result = scheduler.to_dict()
         assert isinstance(result, dict)
@@ -230,9 +243,7 @@ class TestToDict:
     )
     @patch.object(CenturionScheduler, "_ram_available_mb", return_value=8192)
     @patch.object(CenturionScheduler, "_ram_total_mb", return_value=16384)
-    def test_to_dict_system_keys(
-        self, _mock_total, _mock_avail, _mock_pressure, scheduler
-    ):
+    def test_to_dict_system_keys(self, _mock_total, _mock_avail, _mock_pressure, scheduler):
         """to_dict()['system'] has cpu_count, ram_total_mb, ram_available_mb, load_avg, platform, memory_pressure."""
         result = scheduler.to_dict()
         system = result["system"]
@@ -255,9 +266,7 @@ class TestToDict:
     )
     @patch.object(CenturionScheduler, "_ram_available_mb", return_value=8192)
     @patch.object(CenturionScheduler, "_ram_total_mb", return_value=16384)
-    def test_to_dict_allocated_keys(
-        self, _mock_total, _mock_avail, _mock_pressure, scheduler
-    ):
+    def test_to_dict_allocated_keys(self, _mock_total, _mock_avail, _mock_pressure, scheduler):
         """to_dict()['allocated'] has cpu_millicores, memory_mb, active_agents."""
         result = scheduler.to_dict()
         allocated = result["allocated"]
@@ -271,9 +280,7 @@ class TestToDict:
     )
     @patch.object(CenturionScheduler, "_ram_available_mb", return_value=8192)
     @patch.object(CenturionScheduler, "_ram_total_mb", return_value=16384)
-    def test_to_dict_recommended_max_agents_is_int(
-        self, _mock_total, _mock_avail, _mock_pressure, scheduler
-    ):
+    def test_to_dict_recommended_max_agents_is_int(self, _mock_total, _mock_avail, _mock_pressure, scheduler):
         """to_dict()['recommended_max_agents'] is an integer."""
         result = scheduler.to_dict()
         assert isinstance(result["recommended_max_agents"], int)
@@ -285,9 +292,7 @@ class TestToDict:
     )
     @patch.object(CenturionScheduler, "_ram_available_mb", return_value=8192)
     @patch.object(CenturionScheduler, "_ram_total_mb", return_value=16384)
-    def test_to_dict_load_avg_is_three_element_list(
-        self, _mock_total, _mock_avail, _mock_pressure, scheduler
-    ):
+    def test_to_dict_load_avg_is_three_element_list(self, _mock_total, _mock_avail, _mock_pressure, scheduler):
         """to_dict()['system']['load_avg'] is a list of three floats."""
         result = scheduler.to_dict()
         load_avg = result["system"]["load_avg"]

@@ -8,7 +8,7 @@ all behave correctly at each transition.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -20,10 +20,10 @@ from centurion.core.legionary import LegionaryStatus
 from centurion.core.scheduler import CenturionScheduler, MemoryPressureLevel
 from centurion.hardware.throttle import Throttle
 
-
 # ---------------------------------------------------------------------------
 # Mock agent type — lightweight, no real processes
 # ---------------------------------------------------------------------------
+
 
 class MockAgentType(AgentType):
     """Deterministic mock agent for guardrail integration tests."""
@@ -54,6 +54,7 @@ class MockAgentType(AgentType):
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def agent_type():
@@ -109,6 +110,7 @@ def century(century_config, agent_type, scheduler, event_bus):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _patch_pressure(level: MemoryPressureLevel):
     """Return a context manager that forces _memory_pressure_level to return *level*."""
     return patch.object(
@@ -133,6 +135,7 @@ def _patch_system_calls():
 # Integration tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.asyncio
 async def test_normal_state_allows_scheduling(scheduler, agent_type, throttle, event_bus):
     """Under NORMAL pressure agents can be scheduled and throttle reports NORMAL."""
@@ -154,7 +157,10 @@ async def test_normal_state_allows_scheduling(scheduler, agent_type, throttle, e
 
 @pytest.mark.asyncio
 async def test_warn_blocks_scheduling_and_emits_caution(
-    scheduler, agent_type, throttle, event_bus,
+    scheduler,
+    agent_type,
+    throttle,
+    event_bus,
 ):
     """WARN pressure blocks admission and throttle emits memory_caution."""
 
@@ -176,9 +182,9 @@ async def test_warn_blocks_scheduling_and_emits_caution(
         while not queue.empty():
             events.append(queue.get_nowait())
         event_types = [e.event_type for e in events]
-        assert any(
-            et in ("memory_caution", "memory_warning") for et in event_types
-        ), f"Expected memory_caution or memory_warning, got {event_types}"
+        assert any(et in ("memory_caution", "memory_warning") for et in event_types), (
+            f"Expected memory_caution or memory_warning, got {event_types}"
+        )
     finally:
         for p in patches:
             p.stop()
@@ -186,7 +192,9 @@ async def test_warn_blocks_scheduling_and_emits_caution(
 
 @pytest.mark.asyncio
 async def test_warn_scale_down_terminates_idle_above_min(
-    century, scheduler, agent_type,
+    century,
+    scheduler,
+    agent_type,
 ):
     """At WARN pressure, _memory_pressure_scale_down removes idle agents above min."""
 
@@ -222,7 +230,10 @@ async def test_warn_scale_down_terminates_idle_above_min(
 
 @pytest.mark.asyncio
 async def test_critical_blocks_scheduling_emits_critical_and_purges(
-    scheduler, agent_type, throttle, event_bus,
+    scheduler,
+    agent_type,
+    throttle,
+    event_bus,
 ):
     """CRITICAL pressure blocks admission, emits memory_critical, and attempts purge."""
 
@@ -245,9 +256,7 @@ async def test_critical_blocks_scheduling_emits_critical_and_purges(
         while not queue.empty():
             events.append(queue.get_nowait())
         event_types = [e.event_type for e in events]
-        assert "memory_critical" in event_types, (
-            f"Expected memory_critical, got {event_types}"
-        )
+        assert "memory_critical" in event_types, f"Expected memory_critical, got {event_types}"
     finally:
         for p in patches:
             p.stop()
@@ -255,7 +264,9 @@ async def test_critical_blocks_scheduling_emits_critical_and_purges(
 
 @pytest.mark.asyncio
 async def test_critical_scale_down_terminates_all_idle(
-    century, scheduler, agent_type,
+    century,
+    scheduler,
+    agent_type,
 ):
     """At CRITICAL pressure, _memory_pressure_scale_down terminates ALL idle agents,
     even below min_legionaries."""
@@ -288,7 +299,9 @@ async def test_critical_scale_down_terminates_all_idle(
 
 @pytest.mark.asyncio
 async def test_return_to_normal_allows_scheduling_after_cooldown(
-    scheduler, agent_type, throttle,
+    scheduler,
+    agent_type,
+    throttle,
 ):
     """After pressure returns to NORMAL, scheduling is allowed again."""
 
@@ -325,7 +338,11 @@ async def test_return_to_normal_allows_scheduling_after_cooldown(
 
 @pytest.mark.asyncio
 async def test_full_pressure_cycle(
-    scheduler, agent_type, throttle, event_bus, century,
+    scheduler,
+    agent_type,
+    throttle,
+    event_bus,
+    century,
 ):
     """End-to-end: NORMAL -> WARN -> CRITICAL -> NORMAL with all components."""
 
