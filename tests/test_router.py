@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from centurion.api.router import health_router, request_logging_middleware, router
+from centurion.core.scheduler import SystemResources
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +44,7 @@ def _mock_engine(
     engine.legions = legions if legions is not None else {}
 
     # Scheduler
-    engine.scheduler.probe_system.return_value = None
+    engine.scheduler.probe_system.return_value = SystemResources()
     engine.scheduler.active_agents = active_agents
     engine.scheduler.recommended_max_agents.return_value = recommended_max
 
