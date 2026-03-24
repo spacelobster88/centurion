@@ -7,6 +7,7 @@ The autoscaler loop is called the Optio (second-in-command).
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import os
 import time
@@ -14,7 +15,6 @@ import uuid
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from centurion.agent_types.base import AgentResult, AgentType
 from centurion.core.circuit_breaker import CircuitBreaker
 from centurion.core.exceptions import (
     AgentAPIError,
@@ -28,6 +28,7 @@ from centurion.core.scheduler import MemoryPressureLevel
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
+    from centurion.agent_types.base import AgentResult, AgentType
     from centurion.core.events import EventBus
     from centurion.core.scheduler import CenturionScheduler
 
@@ -112,7 +113,12 @@ class Century:
             return future
         logger.info(
             "Task submitted",
-            extra={"century_id": self.id, "task_id": task_id, "priority": priority, "queue_depth": self.task_queue.qsize()},
+            extra={
+                "century_id": self.id,
+                "task_id": task_id,
+                "priority": priority,
+                "queue_depth": self.task_queue.qsize(),
+            },
         )
 
         if self.event_bus:
@@ -157,7 +163,9 @@ class Century:
                 break
         if drained:
             logger.info(
-                "Century %s dismissed: failed %d pending futures", self.id, drained,
+                "Century %s dismissed: failed %d pending futures",
+                self.id,
+                drained,
             )
 
     async def scale_to(self, target: int) -> None:
@@ -181,13 +189,16 @@ class Century:
             except Exception as exc:
                 logger.warning(
                     "Broadcast delivery failed for legionary %s: %s",
-                    leg.id, exc,
+                    leg.id,
+                    exc,
                 )
-                results.append({
-                    "legionary_id": leg.id,
-                    "delivered": False,
-                    "error": str(exc),
-                })
+                results.append(
+                    {
+                        "legionary_id": leg.id,
+                        "delivered": False,
+                        "error": str(exc),
+                    }
+                )
         return results
 
     def status_report(self) -> dict:
@@ -201,12 +212,12 @@ class Century:
                 "task_timeout": self.config.task_timeout,
             },
             "legionaries_count": len(self.legionaries),
-            "idle": sum(1 for l in self.legionaries.values() if l.status == LegionaryStatus.IDLE),
-            "busy": sum(1 for l in self.legionaries.values() if l.status == LegionaryStatus.BUSY),
-            "failed": sum(1 for l in self.legionaries.values() if l.status == LegionaryStatus.FAILED),
+            "idle": sum(1 for leg in self.legionaries.values() if leg.status == LegionaryStatus.IDLE),
+            "busy": sum(1 for leg in self.legionaries.values() if leg.status == LegionaryStatus.BUSY),
+            "failed": sum(1 for leg in self.legionaries.values() if leg.status == LegionaryStatus.FAILED),
             "queue_depth": self.task_queue.qsize(),
-            "total_tasks_completed": sum(l.tasks_completed for l in self.legionaries.values()),
-            "total_tasks_failed": sum(l.tasks_failed for l in self.legionaries.values()),
+            "total_tasks_completed": sum(leg.tasks_completed for leg in self.legionaries.values()),
+            "total_tasks_failed": sum(leg.tasks_failed for leg in self.legionaries.values()),
         }
 
     # --- Internal ---
@@ -250,10 +261,8 @@ class Century:
     async def _terminate_legionary(self, leg: Legionary) -> None:
         """Terminate a legionary and free resources."""
         if leg.handle is not None:
-            try:
+            with contextlib.suppress(Exception):
                 await self.agent_type.terminate(leg.handle)
-            except Exception:
-                pass
         leg.status = LegionaryStatus.TERMINATED
 
         if self.scheduler:
@@ -275,9 +284,10 @@ class Century:
         while self._running:
             try:
                 priority, _, task_id, prompt, future = await asyncio.wait_for(
-                    self.task_queue.get(), timeout=5.0,
+                    self.task_queue.get(),
+                    timeout=5.0,
                 )
-            except (asyncio.TimeoutError, asyncio.CancelledError):
+            except (TimeoutError, asyncio.CancelledError):
                 if not self._running:
                     break
                 continue
@@ -315,13 +325,23 @@ class Century:
                     self._circuit_breaker.record_success()
                     logger.info(
                         "Task completed",
-                        extra={"task_id": task_id, "legionary_id": leg_id, "duration_s": result.duration_seconds, "success": True},
+                        extra={
+                            "task_id": task_id,
+                            "legionary_id": leg_id,
+                            "duration_s": result.duration_seconds,
+                            "success": True,
+                        },
                     )
                 else:
                     self._circuit_breaker.record_failure()
                     logger.warning(
                         "Task failed",
-                        extra={"task_id": task_id, "legionary_id": leg_id, "duration_s": result.duration_seconds, "error": result.error},
+                        extra={
+                            "task_id": task_id,
+                            "legionary_id": leg_id,
+                            "duration_s": result.duration_seconds,
+                            "error": result.error,
+                        },
                     )
 
                 event_type = "task_completed" if result.success else "task_failed"
@@ -340,7 +360,12 @@ class Century:
                 self._circuit_breaker.record_failure()
                 logger.warning(
                     "Task timed out",
-                    extra={"task_id": task_id, "legionary_id": leg_id, "timeout_seconds": exc.timeout_seconds, "error_type": type(exc).__name__},
+                    extra={
+                        "task_id": task_id,
+                        "legionary_id": leg_id,
+                        "timeout_seconds": exc.timeout_seconds,
+                        "error_type": type(exc).__name__,
+                    },
                 )
                 if not future.done():
                     future.set_exception(exc)
@@ -348,7 +373,12 @@ class Century:
                 self._circuit_breaker.record_failure()
                 logger.error(
                     "Task execution exception",
-                    extra={"task_id": task_id, "legionary_id": leg_id, "error_type": type(exc).__name__, "retryable": exc.retryable},
+                    extra={
+                        "task_id": task_id,
+                        "legionary_id": leg_id,
+                        "error_type": type(exc).__name__,
+                        "retryable": exc.retryable,
+                    },
                     exc_info=True,
                 )
                 if not future.done():
@@ -405,10 +435,7 @@ class Century:
             )
 
     async def _scale_down(self, count: int) -> None:
-        idle = [
-            lid for lid, l in self.legionaries.items()
-            if l.status == LegionaryStatus.IDLE
-        ]
+        idle = [lid for lid, leg in self.legionaries.items() if leg.status == LegionaryStatus.IDLE]
         to_remove = idle[:count]
         for lid in to_remove:
             leg = self.legionaries.pop(lid, None)
@@ -444,13 +471,17 @@ class Century:
                 consecutive_errors += 1
                 logger.exception(
                     "Optio %s: unexpected error (%d/%d): %s",
-                    self.id, consecutive_errors, max_consecutive, exc,
+                    self.id,
+                    consecutive_errors,
+                    max_consecutive,
+                    exc,
                 )
 
             if consecutive_errors >= max_consecutive:
                 logger.critical(
                     "Optio %s: %d consecutive errors, backing off 60s",
-                    self.id, consecutive_errors,
+                    self.id,
+                    consecutive_errors,
                 )
                 await asyncio.sleep(60.0)
                 consecutive_errors = 0
@@ -469,10 +500,7 @@ class Century:
         if pressure == MemoryPressureLevel.NORMAL:
             return
 
-        idle = [
-            lid for lid, l in self.legionaries.items()
-            if l.status == LegionaryStatus.IDLE
-        ]
+        idle = [lid for lid, leg in self.legionaries.items() if leg.status == LegionaryStatus.IDLE]
         if not idle:
             return
 
@@ -533,7 +561,7 @@ class Century:
             return
 
         queue_depth = self.task_queue.qsize()
-        idle_count = sum(1 for l in self.legionaries.values() if l.status == LegionaryStatus.IDLE)
+        idle_count = sum(1 for leg in self.legionaries.values() if leg.status == LegionaryStatus.IDLE)
         current = len(self.legionaries)
 
         # Scale up
@@ -548,7 +576,8 @@ class Century:
                     logger.warning(
                         "Optio %s: %d tasks queued but no resource slots available "
                         "(insufficient memory/CPU). Tasks will wait until resources free up.",
-                        self.id, queue_depth,
+                        self.id,
+                        queue_depth,
                     )
                     if self.event_bus:
                         await self.event_bus.emit(
@@ -565,7 +594,12 @@ class Century:
             if needed > 0:
                 logger.info(
                     "Optio: scaling up",
-                    extra={"century_id": self.id, "queue_depth": queue_depth, "current_agents": current, "adding": needed},
+                    extra={
+                        "century_id": self.id,
+                        "queue_depth": queue_depth,
+                        "current_agents": current,
+                        "adding": needed,
+                    },
                 )
                 await self._scale_up(needed)
             return
@@ -583,7 +617,12 @@ class Century:
                 if excess > 0:
                     logger.info(
                         "Optio: scaling down",
-                        extra={"century_id": self.id, "queue_depth": queue_depth, "current_agents": current, "removing": excess},
+                        extra={
+                            "century_id": self.id,
+                            "queue_depth": queue_depth,
+                            "current_agents": current,
+                            "removing": excess,
+                        },
                     )
                     await self._scale_down(excess)
                 self._queue_empty_since = None

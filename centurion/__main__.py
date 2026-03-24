@@ -27,12 +27,10 @@ Usage::
 from __future__ import annotations
 
 import argparse
-import asyncio
 import json
 import os
-import sys
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from typing import TYPE_CHECKING
 
 import uvicorn
 from fastapi import FastAPI
@@ -46,6 +44,8 @@ from centurion.config import CenturionConfig
 from centurion.core.engine import Centurion
 from centurion.core.scheduler import CenturionScheduler
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 # ---------------------------------------------------------------------------
 # ASCII banner
@@ -91,6 +91,7 @@ QUICKSTART_HEADER = r"""
 # Hardware probing and recommendation
 # ---------------------------------------------------------------------------
 
+
 def _build_recommendation() -> dict:
     """Probe hardware and return a recommendation dict."""
     scheduler = CenturionScheduler()
@@ -99,8 +100,8 @@ def _build_recommendation() -> dict:
     recommended_max = hw["recommended_max_agents"]
 
     # Per-agent-type breakdown
-    from centurion.agent_types.claude_cli import ClaudeCliAgentType
     from centurion.agent_types.claude_api import ClaudeApiAgentType
+    from centurion.agent_types.claude_cli import ClaudeCliAgentType
     from centurion.agent_types.shell import ShellAgentType
 
     types = {
@@ -153,6 +154,7 @@ def _suggest_deployment(system: dict, breakdown: dict) -> str:
 # Pretty-print helpers
 # ---------------------------------------------------------------------------
 
+
 def _print_hardware_table(rec: dict) -> None:
     """Print a formatted hardware summary table."""
     s = rec["system"]
@@ -178,7 +180,7 @@ def _print_recommendation_table(rec: dict, agent_type: str) -> None:
     print("  AGENT CAPACITY BY TYPE")
     print("-" * w)
     print(f"  {'Type':<14s} {'Max':>5s}  {'CPU/agent':>10s}  {'RAM/agent':>10s}")
-    print(f"  {'-'*14:<14s} {'-----':>5s}  {'----------':>10s}  {'----------':>10s}")
+    print(f"  {'-' * 14:<14s} {'-----':>5s}  {'----------':>10s}  {'----------':>10s}")
     for name, info in rec["per_type"].items():
         marker = " <--" if name == agent_type else ""
         print(
@@ -209,6 +211,7 @@ def _print_recommendation_table(rec: dict, agent_type: str) -> None:
 # ---------------------------------------------------------------------------
 # Quickstart logic
 # ---------------------------------------------------------------------------
+
 
 async def _quickstart_bootstrap(
     engine: Centurion,
@@ -246,7 +249,6 @@ async def _quickstart_bootstrap(
 
 def _ensure_harness_loop() -> None:
     """Install or update harness-loop as a Claude Code skill."""
-    import shutil
     import subprocess
     from pathlib import Path
 
@@ -263,7 +265,9 @@ def _ensure_harness_loop() -> None:
             try:
                 subprocess.run(
                     ["git", "pull", "--ff-only"],
-                    cwd=str(target), capture_output=True, timeout=15,
+                    cwd=str(target),
+                    capture_output=True,
+                    timeout=15,
                 )
                 print("  Harness Loop: already installed, updated ✓")
             except Exception:
@@ -284,7 +288,9 @@ def _ensure_harness_loop() -> None:
         try:
             subprocess.run(
                 ["git", "clone", repo_url, str(local_clone)],
-                capture_output=True, timeout=60, check=True,
+                capture_output=True,
+                timeout=60,
+                check=True,
             )
         except Exception as e:
             print(f"  Harness Loop: clone failed ({e}). Install manually:")
@@ -339,7 +345,7 @@ def cmd_quickstart(args: argparse.Namespace) -> None:
             await _quickstart_bootstrap(engine, agent_type_name, recommendation)
 
             print(BANNER)
-            print(f"  Centurion is ONLINE  [quickstart mode]")
+            print("  Centurion is ONLINE  [quickstart mode]")
             print(f"  Listening on http://{args.host}:{args.port}")
             print(f"  Agent type: {agent_type_name}  |  Max agents: {max_agents}")
             print()
@@ -365,6 +371,7 @@ def cmd_quickstart(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 # Existing commands
 # ---------------------------------------------------------------------------
+
 
 def cmd_recommend(args: argparse.Namespace) -> None:
     """Print hardware recommendation and exit."""
@@ -427,10 +434,9 @@ def cmd_up(args: argparse.Namespace) -> None:
 # CLI entry point
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Centurion AI Agent Orchestration Engine"
-    )
+    parser = argparse.ArgumentParser(description="Centurion AI Agent Orchestration Engine")
     sub = parser.add_subparsers(dest="command")
 
     # centurion quickstart
@@ -457,7 +463,9 @@ def main() -> None:
     up_parser.add_argument("--host", default="0.0.0.0")
     up_parser.add_argument("--port", type=int, default=8100)
     up_parser.add_argument(
-        "--max-agents", type=int, default=0,
+        "--max-agents",
+        type=int,
+        default=0,
         help="Hard limit on concurrent agents (0 = auto from hardware)",
     )
     up_parser.add_argument(

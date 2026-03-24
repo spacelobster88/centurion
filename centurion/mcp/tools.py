@@ -43,6 +43,7 @@ def _delete(path: str) -> dict:
 # Fleet
 # =========================================================================
 
+
 @mcp.tool()
 def fleet_status() -> dict:
     """Get macro-level fleet status including all legions, centuries, and legionary counts.
@@ -66,6 +67,7 @@ def hardware_status() -> dict:
 # =========================================================================
 # Legions
 # =========================================================================
+
 
 @mcp.tool()
 def raise_legion(name: str, legion_id: str | None = None, quota: dict | None = None) -> dict:
@@ -115,6 +117,7 @@ def disband_legion(legion_id: str) -> dict:
 # =========================================================================
 # Centuries
 # =========================================================================
+
 
 @mcp.tool()
 def add_century(
@@ -188,6 +191,7 @@ def remove_century(century_id: str) -> dict:
 # Tasks
 # =========================================================================
 
+
 @mcp.tool()
 def submit_task(century_id: str, prompt: str, priority: int = 5, task_id: str | None = None) -> dict:
     """Submit a task to a specific century for execution.
@@ -255,6 +259,7 @@ def cancel_task(task_id: str) -> dict:
 # Legionaries
 # =========================================================================
 
+
 @mcp.tool()
 def list_legionaries(century_id: str) -> list[dict]:
     """List all legionaries (agent instances) in a century.
@@ -281,6 +286,7 @@ def get_legionary(legionary_id: str) -> dict:
 # Agent types
 # =========================================================================
 
+
 @mcp.tool()
 def list_agent_types() -> dict:
     """List all registered agent types available for creating centuries.
@@ -293,6 +299,7 @@ def list_agent_types() -> dict:
 # =========================================================================
 # Broadcast
 # =========================================================================
+
 
 @mcp.tool()
 def broadcast(message: str, target: str = "all", target_id: str | None = None) -> dict:

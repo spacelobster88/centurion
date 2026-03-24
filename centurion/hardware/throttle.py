@@ -78,8 +78,7 @@ class Throttle:
 
         # Orange: 85% ratio, or WARN pressure combined with a high ratio (>=70%).
         if ratio >= self._ORANGE_RATIO or (
-            pressure in (MemoryPressureLevel.WARN, MemoryPressureLevel.CRITICAL)
-            and ratio >= self._YELLOW_RATIO
+            pressure in (MemoryPressureLevel.WARN, MemoryPressureLevel.CRITICAL) and ratio >= self._YELLOW_RATIO
         ):
             await self.event_bus.emit(
                 "memory_warning",

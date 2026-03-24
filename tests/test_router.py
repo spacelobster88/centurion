@@ -4,17 +4,16 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from centurion.api.router import health_router, request_logging_middleware, router
 from centurion.core.scheduler import SystemResources
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_app(**state_attrs) -> FastAPI:
     """Create a minimal FastAPI app with both routers and optional state."""
@@ -67,6 +66,7 @@ def _mock_engine(
 # 1. Health endpoint returns 200
 # ---------------------------------------------------------------------------
 
+
 class TestHealthEndpoint:
     async def test_health_returns_200(self):
         """GET /health returns 200 with status ok."""
@@ -81,6 +81,7 @@ class TestHealthEndpoint:
 # ---------------------------------------------------------------------------
 # 2. Readiness endpoint checks subsystems
 # ---------------------------------------------------------------------------
+
 
 class TestReadinessEndpoint:
     async def test_readiness_all_ok(self):
@@ -112,6 +113,7 @@ class TestReadinessEndpoint:
 # 3. DB errors in get_task return 503 not bare 500 (S8 fix)
 # ---------------------------------------------------------------------------
 
+
 class TestGetTaskDBError:
     async def test_get_task_db_error_returns_503(self):
         """GET /api/centurion/tasks/{id} returns 503 on database error, not 500."""
@@ -140,6 +142,7 @@ class TestGetTaskDBError:
 # ---------------------------------------------------------------------------
 # 4. DB errors in cancel_task return 503 not bare 500 (S8 fix)
 # ---------------------------------------------------------------------------
+
 
 class TestCancelTaskDBError:
     async def test_cancel_task_db_error_on_lookup_returns_503(self):
@@ -172,10 +175,12 @@ class TestCancelTaskDBError:
 # 5. Request logging middleware exists and works
 # ---------------------------------------------------------------------------
 
+
 class TestRequestLoggingMiddleware:
     async def test_middleware_logs_request(self, caplog):
         """The request logging middleware logs method, path, status, and duration."""
         import logging
+
         engine = _mock_engine(has_db=True)
         app = _make_app(centurion=engine)
         transport = ASGITransport(app=app)

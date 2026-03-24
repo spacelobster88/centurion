@@ -18,13 +18,10 @@ import uuid
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from centurion.agent_types.base import AgentResult
-
 if TYPE_CHECKING:
+    from centurion.agent_types.base import AgentResult
     from centurion.core.century import Century
     from centurion.core.engine import Centurion
-    from centurion.core.events import EventBus
-    from centurion.core.legion import Legion
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +60,7 @@ class Broadcaster:
     def __init__(self, engine: Centurion) -> None:
         self.engine = engine
 
-    async def broadcast_to_century(
-        self, century_id: str, message: str, wait: bool = False
-    ) -> BroadcastResult:
+    async def broadcast_to_century(self, century_id: str, message: str, wait: bool = False) -> BroadcastResult:
         """Broadcast a message to all legionaries in a specific century (row)."""
         century = self._find_century(century_id)
         if century is None:
@@ -90,9 +85,7 @@ class Broadcaster:
         await self._emit_broadcast_event(result)
         return result
 
-    async def broadcast_to_legion(
-        self, legion_id: str, message: str, wait: bool = False
-    ) -> BroadcastResult:
+    async def broadcast_to_legion(self, legion_id: str, message: str, wait: bool = False) -> BroadcastResult:
         """Broadcast a message to all legionaries in a specific legion (column)."""
         legion = self.engine.legions.get(legion_id)
         if legion is None:
@@ -121,9 +114,7 @@ class Broadcaster:
         await self._emit_broadcast_event(result)
         return result
 
-    async def broadcast_to_fleet(
-        self, message: str, wait: bool = False
-    ) -> BroadcastResult:
+    async def broadcast_to_fleet(self, message: str, wait: bool = False) -> BroadcastResult:
         """Broadcast a message to all legionaries in the entire fleet."""
         broadcast_id = f"bc-{uuid.uuid4().hex[:8]}"
         result = BroadcastResult(
@@ -175,7 +166,8 @@ class Broadcaster:
             except Exception as exc:
                 logger.warning(
                     "Broadcast delivery failed for legionary %s: %s",
-                    leg_id, exc,
+                    leg_id,
+                    exc,
                 )
         return futures
 
@@ -189,21 +181,25 @@ class Broadcaster:
         for item in done:
             if isinstance(item, Exception):
                 result.failed += 1
-                result.results.append({
-                    "success": False,
-                    "error": str(item),
-                })
+                result.results.append(
+                    {
+                        "success": False,
+                        "error": str(item),
+                    }
+                )
             else:
                 if item.success:
                     result.delivered += 1
                 else:
                     result.failed += 1
-                result.results.append({
-                    "success": item.success,
-                    "output": item.output[:500] if item.output else None,
-                    "error": item.error,
-                    "legionary_id": item.legionary_id,
-                })
+                result.results.append(
+                    {
+                        "success": item.success,
+                        "output": item.output[:500] if item.output else None,
+                        "error": item.error,
+                        "legionary_id": item.legionary_id,
+                    }
+                )
         return result
 
     async def _emit_broadcast_event(self, result: BroadcastResult) -> None:

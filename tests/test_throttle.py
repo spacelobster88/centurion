@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from centurion.core.scheduler import CenturionScheduler, MemoryPressureLevel, SystemResources
 from centurion.config import CenturionConfig
+from centurion.core.scheduler import CenturionScheduler, MemoryPressureLevel, SystemResources
 from centurion.hardware.throttle import Throttle
 
 
@@ -62,7 +62,9 @@ class TestMemoryCaution:
     async def test_emits_memory_caution_on_warn_pressure_low_ratio(self):
         """check() emits memory_caution when pressure is WARN but ratio < 0.70."""
         throttle, bus = _make_throttle(
-            active=3, recommended=10, pressure=MemoryPressureLevel.WARN,
+            active=3,
+            recommended=10,
+            pressure=MemoryPressureLevel.WARN,
         )
 
         result = await throttle.check()
@@ -97,7 +99,9 @@ class TestMemoryWarning:
         """check() emits memory_warning when WARN pressure + ratio >= 0.70."""
         # 7/10 = 0.70 ratio + WARN pressure => orange level
         throttle, bus = _make_throttle(
-            active=7, recommended=10, pressure=MemoryPressureLevel.WARN,
+            active=7,
+            recommended=10,
+            pressure=MemoryPressureLevel.WARN,
         )
 
         result = await throttle.check()
@@ -131,7 +135,9 @@ class TestMemoryCritical:
     async def test_emits_memory_critical_on_critical_pressure(self):
         """check() emits memory_critical when pressure is CRITICAL regardless of ratio."""
         throttle, bus = _make_throttle(
-            active=1, recommended=10, pressure=MemoryPressureLevel.CRITICAL,
+            active=1,
+            recommended=10,
+            pressure=MemoryPressureLevel.CRITICAL,
         )
 
         result = await throttle.check()

@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
-from centurion.config import ResourceRequirements
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from centurion.config import ResourceRequirements
 
 
 @dataclass

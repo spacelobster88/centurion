@@ -9,13 +9,15 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from centurion.a2a.agent_card import build_agent_card
-from centurion.core.engine import Centurion
+
+if TYPE_CHECKING:
+    from centurion.core.engine import Centurion
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,7 @@ a2a_router = APIRouter(tags=["a2a"])
 # ---------------------------------------------------------------------------
 # Agent Card discovery
 # ---------------------------------------------------------------------------
+
 
 @a2a_router.get("/.well-known/agent.json")
 async def agent_card(request: Request) -> dict[str, Any]:
@@ -37,14 +40,17 @@ async def agent_card(request: Request) -> dict[str, Any]:
 # A2A JSON-RPC endpoint
 # ---------------------------------------------------------------------------
 
+
 class A2AMessage(BaseModel):
     """A single A2A message part."""
+
     role: str = "user"
     parts: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class A2ATaskRequest(BaseModel):
     """A2A task/send request body."""
+
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     params: dict[str, Any] = Field(default_factory=dict)
 
@@ -90,7 +96,7 @@ async def a2a_task_handler(request: Request, body: A2ATaskRequest) -> dict[str, 
     century = next(iter(legion.centuries.values()))
     task_id = f"a2a-{uuid.uuid4().hex[:8]}"
 
-    future = await century.submit_task(prompt=prompt, priority=5, task_id=task_id)
+    await century.submit_task(prompt=prompt, priority=5, task_id=task_id)
 
     logger.info(
         "A2A task submitted",

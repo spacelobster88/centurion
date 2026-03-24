@@ -36,7 +36,9 @@ def setup_mcp() -> None:
     try:
         result = subprocess.run(
             ["claude", "mcp", "add", "centurion", "--", "python", "-m", "centurion.mcp"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.returncode == 0:
             print("  [OK] Registered centurion MCP server via Claude CLI")
@@ -81,6 +83,7 @@ def setup_api() -> None:
     print("Generating OpenAPI specification...")
     try:
         from fastapi import FastAPI
+
         from centurion.api.router import health_router, router
 
         app = FastAPI(
@@ -189,9 +192,7 @@ Typical workflow:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="One-click integration setup for Centurion"
-    )
+    parser = argparse.ArgumentParser(description="One-click integration setup for Centurion")
     parser.add_argument(
         "integration",
         choices=["mcp", "api", "a2a", "skill", "all"],

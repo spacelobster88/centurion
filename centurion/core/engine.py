@@ -6,16 +6,18 @@ Singleton per process. Manages legions, scheduling, and the event bus.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import uuid
 
 from centurion.agent_types.registry import AgentTypeRegistry
 from centurion.config import CenturionConfig
-from centurion.core.broadcast import BroadcastResult, Broadcaster
-from centurion.core.century import CenturyConfig
+from centurion.core.broadcast import Broadcaster
 from centurion.core.events import EventBus
 from centurion.core.legion import Legion, LegionQuota
 from centurion.core.scheduler import CenturionScheduler
+from centurion.core.sentinel import Sentinel, SentinelConfig
+from centurion.core.session_registry import SessionRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +48,24 @@ class Centurion:
         self.event_bus = EventBus(max_history=self.config.event_buffer_size)
         self.legions: dict[str, Legion] = {}
         self.broadcaster = Broadcaster(self)
+        self.session_registry = SessionRegistry()
         self._shutting_down: bool = False
         self._register_default_types()
+
+        # Sentinel service for stale session cleanup
+        sentinel_config = SentinelConfig(
+            scan_interval_seconds=self.config.sentinel_scan_interval,
+            idle_threshold_seconds=self.config.sentinel_idle_threshold,
+            max_runtime_seconds=self.config.sentinel_max_runtime,
+            dry_run=self.config.sentinel_dry_run,
+            enabled=self.config.sentinel_enabled,
+        )
+        self.sentinel = Sentinel(
+            config=sentinel_config,
+            session_registry=self.session_registry,
+            event_bus=self.event_bus,
+        )
+
         logger.info(
             "Engine initialized",
             extra={"config": {"max_agents": self.config.max_agents_hard_limit}},
@@ -55,8 +73,8 @@ class Centurion:
 
     def _register_default_types(self) -> None:
         # Lazy imports to avoid circular deps and allow optional deps
-        from centurion.agent_types.claude_cli import ClaudeCliAgentType
         from centurion.agent_types.claude_api import ClaudeApiAgentType
+        from centurion.agent_types.claude_cli import ClaudeCliAgentType
         from centurion.agent_types.shell import ShellAgentType
 
         self.registry.register("claude_cli", ClaudeCliAgentType)
@@ -105,9 +123,7 @@ class Centurion:
             raise KeyError(f"Legion {legion_id!r} not found")
         return legion
 
-    async def broadcast(
-        self, message: str, target: str = "all", target_id: str | None = None
-    ) -> dict:
+    async def broadcast(self, message: str, target: str = "all", target_id: str | None = None) -> dict:
         """Broadcast a message to agents.
 
         Args:
@@ -185,7 +201,7 @@ class Centurion:
             "total_legions": len(self.legions),
             "total_centuries": total_centuries,
             "total_legionaries": total_legionaries,
-            "legions": {lid: l.status_report() for lid, l in self.legions.items()},
+            "legions": {lid: leg.status_report() for lid, leg in self.legions.items()},
             "hardware": self.scheduler.to_dict(),
         }
 
@@ -203,6 +219,10 @@ class Centurion:
         timeout = self.config.shutdown_timeout
         logger.info("shutdown: starting, timeout=%ss", timeout)
 
+        # Phase 0: Stop sentinel
+        if self.sentinel.is_running:
+            await self.sentinel.stop()
+
         # Phase 1: Stop accepting new tasks
         logger.info("shutdown: phase 1 — stop accepting new tasks")
         for legion in self.legions.values():
@@ -213,15 +233,13 @@ class Centurion:
         logger.info("shutdown: phase 2 — draining legions")
         legion_ids = list(self.legions.keys())
         for legion_id in legion_ids:
-            try:
+            with contextlib.suppress(KeyError):
                 await self.disband_legion(legion_id)
-            except KeyError:
-                pass
 
         # Wait for any remaining in-progress tasks with configurable timeout
         try:
             await asyncio.wait_for(self._drain_all(), timeout=timeout)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("shutdown: drain timed out after %ss", timeout)
 
         # Terminate any remaining legions

@@ -14,10 +14,10 @@ from centurion.api.router import health_router, router
 from centurion.config import CenturionConfig
 from centurion.core.engine import Centurion
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def app() -> FastAPI:
@@ -43,6 +43,7 @@ async def client(app: FastAPI) -> AsyncClient:
 # ---------------------------------------------------------------------------
 # E2E Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.e2e
 @pytest.mark.asyncio

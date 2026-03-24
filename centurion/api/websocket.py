@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from centurion.core.engine import Centurion
+if TYPE_CHECKING:
+    from centurion.core.engine import Centurion
 
 
 async def websocket_endpoint(websocket: WebSocket) -> None:

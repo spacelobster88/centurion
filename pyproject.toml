@@ -65,7 +65,7 @@ markers = [
 ]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py312"
 line-length = 120
 
 [tool.ruff.lint]
@@ -80,7 +80,7 @@ indent-style = "space"
 known-first-party = ["centurion"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.12"
 strict_optional = true
 ignore_missing_imports = true
 warn_return_any = true

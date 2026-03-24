@@ -11,10 +11,10 @@ from centurion.core.exceptions import (
     TaskTimeoutError,
 )
 
-
 # ---------------------------------------------------------------------------
 # CenturionError base class
 # ---------------------------------------------------------------------------
+
 
 class TestCenturionError:
     def test_is_exception_subclass(self):
@@ -37,6 +37,7 @@ class TestCenturionError:
 # TaskTimeoutError
 # ---------------------------------------------------------------------------
 
+
 class TestTaskTimeoutError:
     def test_inherits_from_centurion_error(self):
         assert issubclass(TaskTimeoutError, CenturionError)
@@ -57,6 +58,7 @@ class TestTaskTimeoutError:
 # ---------------------------------------------------------------------------
 # AgentProcessError
 # ---------------------------------------------------------------------------
+
 
 class TestAgentProcessError:
     def test_inherits_from_centurion_error(self):
@@ -92,6 +94,7 @@ class TestAgentProcessError:
 # AgentAPIError
 # ---------------------------------------------------------------------------
 
+
 class TestAgentAPIError:
     def test_inherits_from_centurion_error(self):
         assert issubclass(AgentAPIError, CenturionError)
@@ -118,6 +121,7 @@ class TestAgentAPIError:
 # SchedulerError & ConfigurationError
 # ---------------------------------------------------------------------------
 
+
 class TestSchedulerError:
     def test_inherits_from_centurion_error(self):
         assert issubclass(SchedulerError, CenturionError)
@@ -139,6 +143,7 @@ class TestConfigurationError:
 # ---------------------------------------------------------------------------
 # All exceptions inherit from CenturionError
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "exc_cls",

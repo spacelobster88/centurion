@@ -2,10 +2,9 @@
 
 import pytest
 
+from centurion.config import CenturionConfig
 from centurion.core.century import CenturyConfig
 from centurion.core.engine import Centurion
-from centurion.config import CenturionConfig
-
 from tests.conftest import MockAgentType
 
 

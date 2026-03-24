@@ -9,11 +9,14 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import TYPE_CHECKING
 
 import psutil
 
-from centurion.agent_types.base import AgentType
 from centurion.config import CenturionConfig, ResourceSpec
+
+if TYPE_CHECKING:
+    from centurion.agent_types.base import AgentType
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +29,9 @@ class MemoryPressureLevel(Enum):
 
     Ordering: NORMAL < WARN < CRITICAL so max() picks the worse signal.
     """
-    NORMAL   = "normal"    # ratio < 0.6 — no action needed
-    WARN     = "warn"      # 0.6 <= ratio < 0.85 — slow down spawning
+
+    NORMAL = "normal"  # ratio < 0.6 — no action needed
+    WARN = "warn"  # 0.6 <= ratio < 0.85 — slow down spawning
     CRITICAL = "critical"  # ratio >= 0.85 — halt spawning, begin scale-down
 
     def __lt__(self, other: MemoryPressureLevel) -> bool:
@@ -124,9 +128,14 @@ class CenturionScheduler:
         logger.debug(
             "probe_system: ram_total=%d ram_available=%d ram_conservative=%d "
             "ram_compressor=%d pressure=%s load_avg=%.2f/%.2f/%.2f",
-            ram_total_mb, ram_available_mb, ram_available_conservative_mb,
-            ram_compressor_mb, pressure.value,
-            resources.load_avg_1, resources.load_avg_5, resources.load_avg_15,
+            ram_total_mb,
+            ram_available_mb,
+            ram_available_conservative_mb,
+            ram_compressor_mb,
+            pressure.value,
+            resources.load_avg_1,
+            resources.load_avg_5,
+            resources.load_avg_15,
         )
         self._probe_cache = resources
         self._probe_cache_time = time.monotonic()
@@ -150,21 +159,26 @@ class CenturionScheduler:
         if pressure != MemoryPressureLevel.NORMAL:
             logger.debug(
                 "can_schedule: rejected agent_type=%s reason=memory_pressure level=%s",
-                agent_type.name, pressure.value,
+                agent_type.name,
+                pressure.value,
             )
             return False
         req = agent_type.resource_requirements().requests
         available = self._available_resources()
         result = True
-        if available.cpu_millicores < req.cpu_millicores:
-            result = False
-        elif available.memory_mb < req.memory_mb:
-            result = False
-        elif self.config.max_agents_hard_limit > 0 and self.active_agents >= self.config.max_agents_hard_limit:
+        if (
+            available.cpu_millicores < req.cpu_millicores
+            or available.memory_mb < req.memory_mb
+            or self.config.max_agents_hard_limit > 0
+            and self.active_agents >= self.config.max_agents_hard_limit
+        ):
             result = False
         logger.debug(
             "can_schedule: agent_type=%s result=%s cpu_available=%d memory_available=%d",
-            agent_type.name, result, available.cpu_millicores, available.memory_mb,
+            agent_type.name,
+            result,
+            available.cpu_millicores,
+            available.memory_mb,
         )
         return result
 
@@ -195,7 +209,10 @@ class CenturionScheduler:
         self.active_agents += 1
         logger.debug(
             "allocate: agent_type=%s allocated_cpu=%d allocated_memory=%d active_agents=%d",
-            agent_type.name, self.allocated_cpu, self.allocated_memory, self.active_agents,
+            agent_type.name,
+            self.allocated_cpu,
+            self.allocated_memory,
+            self.active_agents,
         )
 
     def release(self, agent_type: AgentType) -> None:
@@ -206,7 +223,10 @@ class CenturionScheduler:
         self.active_agents = max(0, self.active_agents - 1)
         logger.debug(
             "release: agent_type=%s allocated_cpu=%d allocated_memory=%d active_agents=%d",
-            agent_type.name, self.allocated_cpu, self.allocated_memory, self.active_agents,
+            agent_type.name,
+            self.allocated_cpu,
+            self.allocated_memory,
+            self.active_agents,
         )
 
     def to_dict(self) -> dict:
@@ -240,7 +260,8 @@ class CenturionScheduler:
         removed_pid = self.pid_registry.pop(legionary_id, None)
         logger.debug(
             "unregister_pid: legionary_id=%s pid=%s",
-            legionary_id, removed_pid,
+            legionary_id,
+            removed_pid,
         )
 
     def _actual_memory_usage_mb(self, pids: list[int]) -> int:
@@ -258,7 +279,9 @@ class CenturionScheduler:
             pid_arg = ",".join(str(p) for p in pids)
             result = subprocess.run(
                 ["ps", "-o", "rss=", "-p", pid_arg],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode != 0:
                 return 0
@@ -292,14 +315,19 @@ class CenturionScheduler:
 
         if actual_mb > 0 and allocated_mb > 0 and actual_mb > allocated_mb * 1.5:
             logger.warning(
-                "memory_audit: actual RSS (%d MB) exceeds 1.5x allocated (%d MB), "
-                "ratio=%.2f pid_count=%d",
-                actual_mb, allocated_mb, ratio, len(pids),
+                "memory_audit: actual RSS (%d MB) exceeds 1.5x allocated (%d MB), ratio=%.2f pid_count=%d",
+                actual_mb,
+                allocated_mb,
+                ratio,
+                len(pids),
             )
         else:
             logger.debug(
                 "memory_audit: actual_mb=%d allocated_mb=%d ratio=%.2f pid_count=%d",
-                actual_mb, allocated_mb, ratio, len(pids),
+                actual_mb,
+                allocated_mb,
+                ratio,
+                len(pids),
             )
 
         return audit
@@ -350,7 +378,9 @@ class CenturionScheduler:
         try:
             out = subprocess.run(
                 ["/usr/sbin/sysctl", "-n", "kern.memorystatus_level"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             ).stdout.strip()
             level = int(out)
             if level <= 1:
@@ -398,7 +428,9 @@ class CenturionScheduler:
         try:
             out = subprocess.run(
                 ["/usr/sbin/sysctl", "-n", "vm.compressor_bytes_used"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             ).stdout.strip()
             return int(out) // (1024 * 1024)
         except Exception:

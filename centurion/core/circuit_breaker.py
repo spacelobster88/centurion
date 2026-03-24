@@ -23,10 +23,9 @@ class CircuitBreaker:
 
     @property
     def state(self) -> CircuitState:
-        if self._state == CircuitState.OPEN:
-            if time.monotonic() - self._last_failure_time >= self.cooldown_seconds:
-                self._state = CircuitState.HALF_OPEN
-                logger.info("circuit_breaker %s: OPEN -> HALF_OPEN after cooldown", self.name)
+        if self._state == CircuitState.OPEN and time.monotonic() - self._last_failure_time >= self.cooldown_seconds:
+            self._state = CircuitState.HALF_OPEN
+            logger.info("circuit_breaker %s: OPEN -> HALF_OPEN after cooldown", self.name)
         return self._state
 
     def can_execute(self) -> bool:

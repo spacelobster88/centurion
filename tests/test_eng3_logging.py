@@ -4,17 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from centurion.config import CenturionConfig
-from centurion.core.scheduler import CenturionScheduler
 from centurion.core.events import EventBus
-from centurion.agent_types.base import AgentResult
+from centurion.core.scheduler import CenturionScheduler
 from tests.conftest import MockAgentType
-
 
 # =========================================================================
 # Scheduler logging
@@ -82,12 +79,14 @@ class TestRouterLoggingMiddleware:
     def test_router_has_logger(self):
         """router.py should define a module-level logger."""
         import centurion.api.router as router_mod
+
         assert hasattr(router_mod, "logger")
         assert isinstance(router_mod.logger, logging.Logger)
 
     def test_router_has_logging_middleware(self):
         """router.py should define a request_logging_middleware function."""
         import centurion.api.router as router_mod
+
         assert hasattr(router_mod, "request_logging_middleware")
         assert callable(router_mod.request_logging_middleware)
 
@@ -153,6 +152,7 @@ class TestClaudeCliLogging:
     def test_claude_cli_has_logger(self):
         """claude_cli.py should define a module-level logger."""
         import centurion.agent_types.claude_cli as mod
+
         assert hasattr(mod, "logger")
         assert isinstance(mod.logger, logging.Logger)
 
@@ -166,7 +166,7 @@ class TestClaudeCliLogging:
 
         with caplog.at_level(logging.DEBUG, logger="centurion.agent_types.claude_cli"):
             # It will fail or succeed quickly with echo
-            result = await agent.send_task(handle, "hello", timeout=5.0)
+            await agent.send_task(handle, "hello", timeout=5.0)
 
         debug_records = [r for r in caplog.records if r.levelno == logging.DEBUG]
         assert len(debug_records) >= 1
@@ -181,7 +181,7 @@ class TestClaudeCliLogging:
         handle = {"legionary_id": "leg-001", "cwd": "/tmp", "env": {}}
 
         with caplog.at_level(logging.DEBUG, logger="centurion.agent_types.claude_cli"):
-            result = await agent.send_task(handle, "hello", timeout=5.0)
+            await agent.send_task(handle, "hello", timeout=5.0)
 
         info_records = [r for r in caplog.records if r.levelno == logging.INFO]
         assert len(info_records) >= 1
@@ -197,7 +197,7 @@ class TestClaudeCliLogging:
         handle = {"legionary_id": "leg-timeout", "cwd": "/tmp", "env": {}}
 
         with caplog.at_level(logging.DEBUG, logger="centurion.agent_types.claude_cli"):
-            result = await agent.send_task(handle, "100", timeout=0.1)
+            await agent.send_task(handle, "100", timeout=0.1)
 
         warn_records = [r for r in caplog.records if r.levelno == logging.WARNING]
         assert len(warn_records) >= 1
@@ -215,6 +215,7 @@ class TestClaudeApiLogging:
     def test_claude_api_has_logger(self):
         """claude_api.py should define a module-level logger."""
         import centurion.agent_types.claude_api as mod
+
         assert hasattr(mod, "logger")
         assert isinstance(mod.logger, logging.Logger)
 
@@ -228,7 +229,7 @@ class TestClaudeApiLogging:
 
         with caplog.at_level(logging.DEBUG, logger="centurion.agent_types.claude_api"):
             # This will fail (no real API), which is fine — we just want to check logging
-            result = await agent.send_task(handle, "hello", timeout=5.0)
+            await agent.send_task(handle, "hello", timeout=5.0)
 
         debug_records = [r for r in caplog.records if r.levelno == logging.DEBUG]
         assert len(debug_records) >= 1
@@ -243,7 +244,7 @@ class TestClaudeApiLogging:
         handle = {"legionary_id": "leg-api-001", "api_key": "fake-key"}
 
         with caplog.at_level(logging.DEBUG, logger="centurion.agent_types.claude_api"):
-            result = await agent.send_task(handle, "hello", timeout=5.0)
+            await agent.send_task(handle, "hello", timeout=5.0)
 
         # Should warn since API call will fail
         warn_records = [r for r in caplog.records if r.levelno == logging.WARNING]
@@ -261,6 +262,7 @@ class TestShellLogging:
     def test_shell_has_logger(self):
         """shell.py should define a module-level logger."""
         import centurion.agent_types.shell as mod
+
         assert hasattr(mod, "logger")
         assert isinstance(mod.logger, logging.Logger)
 
@@ -273,7 +275,7 @@ class TestShellLogging:
         handle = {"legionary_id": "leg-shell-001", "cwd": "/tmp", "env": {}}
 
         with caplog.at_level(logging.DEBUG, logger="centurion.agent_types.shell"):
-            result = await agent.send_task(handle, "echo hello", timeout=5.0)
+            await agent.send_task(handle, "echo hello", timeout=5.0)
 
         debug_records = [r for r in caplog.records if r.levelno == logging.DEBUG]
         assert len(debug_records) >= 1
@@ -288,7 +290,7 @@ class TestShellLogging:
         handle = {"legionary_id": "leg-shell-001", "cwd": "/tmp", "env": {}}
 
         with caplog.at_level(logging.DEBUG, logger="centurion.agent_types.shell"):
-            result = await agent.send_task(handle, "echo hello", timeout=5.0)
+            await agent.send_task(handle, "echo hello", timeout=5.0)
 
         info_records = [r for r in caplog.records if r.levelno == logging.INFO]
         assert len(info_records) >= 1
@@ -304,7 +306,7 @@ class TestShellLogging:
         handle = {"legionary_id": "leg-shell-timeout", "cwd": "/tmp", "env": {}}
 
         with caplog.at_level(logging.DEBUG, logger="centurion.agent_types.shell"):
-            result = await agent.send_task(handle, "sleep 100", timeout=0.1)
+            await agent.send_task(handle, "sleep 100", timeout=0.1)
 
         warn_records = [r for r in caplog.records if r.levelno == logging.WARNING]
         assert len(warn_records) >= 1
@@ -322,6 +324,7 @@ class TestEventBusLogging:
     def test_events_has_logger(self):
         """events.py should define a module-level logger."""
         import centurion.core.events as mod
+
         assert hasattr(mod, "logger")
         assert isinstance(mod.logger, logging.Logger)
 

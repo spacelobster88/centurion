@@ -13,7 +13,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import subprocess
 import sys
@@ -57,6 +56,7 @@ def setup_skill() -> bool:
 
     skill_path = skills_dir / "centurion.toml"
     from centurion.skill import SKILL_TOML
+
     skill_path.write_text(SKILL_TOML)
     print(f"[Skill] Installed to {skill_path}")
     return True
@@ -72,12 +72,14 @@ def setup_a2a() -> bool:
 
     print(f"\nAgent Card URL:  {base_url}/.well-known/agent.json")
     print(f"A2A Endpoint:    {base_url}/a2a")
-    print(f"\nTo discover this agent from another A2A client:")
+    print("\nTo discover this agent from another A2A client:")
     print(f"  curl {base_url}/.well-known/agent.json")
-    print(f"\nTo send a task via A2A:")
-    print(f'  curl -X POST {base_url}/a2a \\')
-    print(f'    -H "Content-Type: application/json" \\')
-    print(f'    -d \'{{"id": "1", "params": {{"message": {{"role": "user", "parts": [{{"type": "text", "text": "Analyze this data"}}]}}}}}}\'')
+    print("\nTo send a task via A2A:")
+    print(f"  curl -X POST {base_url}/a2a \\")
+    print('    -H "Content-Type: application/json" \\')
+    print(
+        '    -d \'{"id": "1", "params": {"message": {"role": "user", "parts": [{"type": "text", "text": "Analyze this data"}]}}}\''
+    )
     return True
 
 
@@ -90,33 +92,33 @@ def setup_api() -> bool:
     base = f"http://{host}:{port}/api/centurion"
 
     print(f"\nBase URL: {base}")
-    print(f"\nQuick start:")
-    print(f"  # Check fleet status")
+    print("\nQuick start:")
+    print("  # Check fleet status")
     print(f"  curl {base}/status")
-    print(f"")
-    print(f"  # Check hardware")
+    print("")
+    print("  # Check hardware")
     print(f"  curl {base}/hardware")
-    print(f"")
-    print(f"  # Raise a legion")
+    print("")
+    print("  # Raise a legion")
     print(f'  curl -X POST {base}/legions -H "Content-Type: application/json" \\')
-    print(f'    -d \'{{"name": "Research Team"}}\'')
-    print(f"")
-    print(f"  # Add a century of Claude CLI agents")
-    print(f'  curl -X POST {base}/legions/{{legion_id}}/centuries \\')
-    print(f'    -H "Content-Type: application/json" \\')
-    print(f'    -d \'{{"agent_type": "claude_cli", "min_legionaries": 3, "max_legionaries": 10}}\'')
-    print(f"")
-    print(f"  # Submit a task")
-    print(f'  curl -X POST {base}/centuries/{{century_id}}/tasks \\')
-    print(f'    -H "Content-Type: application/json" \\')
-    print(f'    -d \'{{"prompt": "Analyze the market trends for AI agents"}}\'')
-    print(f"")
-    print(f"  # WebSocket events")
+    print('    -d \'{"name": "Research Team"}\'')
+    print("")
+    print("  # Add a century of Claude CLI agents")
+    print(f"  curl -X POST {base}/legions/{{legion_id}}/centuries \\")
+    print('    -H "Content-Type: application/json" \\')
+    print('    -d \'{"agent_type": "claude_cli", "min_legionaries": 3, "max_legionaries": 10}\'')
+    print("")
+    print("  # Submit a task")
+    print(f"  curl -X POST {base}/centuries/{{century_id}}/tasks \\")
+    print('    -H "Content-Type: application/json" \\')
+    print('    -d \'{"prompt": "Analyze the market trends for AI agents"}\'')
+    print("")
+    print("  # WebSocket events")
     print(f"  wscat -c ws://{host}:{port}/api/centurion/events")
-    print(f"")
-    print(f"  # Broadcast to all agents")
+    print("")
+    print("  # Broadcast to all agents")
     print(f'  curl -X POST {base}/broadcast -H "Content-Type: application/json" \\')
-    print(f'    -d \'{{"message": "Switch to summarization mode", "target": "all"}}\'')
+    print('    -d \'{"message": "Switch to summarization mode", "target": "all"}\'')
     return True
 
 

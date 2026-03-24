@@ -5,17 +5,18 @@ Equivalent to a K8s Namespace with ResourceQuota.
 
 from __future__ import annotations
 
-import asyncio
 import random
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from centurion.agent_types.base import AgentResult
 from centurion.core.century import Century, CenturyConfig
 
 if TYPE_CHECKING:
+    import asyncio
+
+    from centurion.agent_types.base import AgentResult
     from centurion.agent_types.registry import AgentTypeRegistry
     from centurion.core.events import EventBus
     from centurion.core.scheduler import CenturionScheduler
@@ -59,14 +60,10 @@ class Legion:
 
         # Quota check
         if len(self.centuries) >= self.quota.max_centuries:
-            raise ValueError(
-                f"Legion {self.id} quota exceeded: max {self.quota.max_centuries} centuries"
-            )
+            raise ValueError(f"Legion {self.id} quota exceeded: max {self.quota.max_centuries} centuries")
         total_legs = sum(len(c.legionaries) for c in self.centuries.values())
         if total_legs + config.min_legionaries > self.quota.max_legionaries:
-            raise ValueError(
-                f"Legion {self.id} quota exceeded: max {self.quota.max_legionaries} legionaries"
-            )
+            raise ValueError(f"Legion {self.id} quota exceeded: max {self.quota.max_legionaries} legionaries")
 
         agent_type = registry.create(config.agent_type_name, **config.agent_type_config)
         century = Century(

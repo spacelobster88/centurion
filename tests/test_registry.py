@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from centurion.agent_types.base import AgentResult, AgentType
 from centurion.agent_types.registry import AgentTypeRegistry
 from centurion.config import ResourceRequirements
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class FakeAgentType(AgentType):

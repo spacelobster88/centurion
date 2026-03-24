@@ -4,17 +4,16 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from centurion.api.router import health_router, request_logging_middleware, router
 from centurion.hardware.throttle import Throttle
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_app() -> FastAPI:
     """Create a minimal FastAPI app wired with both routers and a mock engine."""
@@ -109,8 +108,8 @@ class TestPurgeEndpointError:
 
 def _make_throttle_for_purge() -> Throttle:
     """Build a Throttle instance with minimal mocked dependencies."""
-    from centurion.core.scheduler import CenturionScheduler, MemoryPressureLevel, SystemResources
     from centurion.config import CenturionConfig
+    from centurion.core.scheduler import CenturionScheduler, MemoryPressureLevel, SystemResources
 
     config = CenturionConfig()
     config.ram_headroom_gb = 2.0
@@ -150,10 +149,7 @@ class TestAttemptPurgeNonZero:
             throttle._attempt_purge()
 
         mock_run.assert_called_once()
-        warning_records = [
-            r for r in caplog.records
-            if r.levelno >= logging.WARNING and "purge" in r.message.lower()
-        ]
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING and "purge" in r.message.lower()]
         assert len(warning_records) >= 1
 
 
@@ -176,8 +172,5 @@ class TestAttemptPurgeTimeout:
             throttle._attempt_purge()
 
         mock_run.assert_called_once()
-        warning_records = [
-            r for r in caplog.records
-            if r.levelno >= logging.WARNING and "purge" in r.message.lower()
-        ]
+        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING and "purge" in r.message.lower()]
         assert len(warning_records) >= 1

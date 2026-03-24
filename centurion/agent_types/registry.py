@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from centurion.agent_types.base import AgentType
+if TYPE_CHECKING:
+    from centurion.agent_types.base import AgentType
 
 
 class AgentTypeRegistry:

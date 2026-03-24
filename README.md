@@ -2,7 +2,7 @@
 
 **Spawn and command an army of AI agents with Roman military precision.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-382%20passing-brightgreen.svg)]()
 [![MCP Tools](https://img.shields.io/badge/MCP%20tools-19-purple.svg)]()
@@ -502,7 +502,7 @@ pytest tests/ -v --cov=centurion
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+Apache-2.0 License. See [LICENSE](LICENSE) for details.
 
 ---
 

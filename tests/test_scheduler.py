@@ -1,13 +1,12 @@
 """Tests for CenturionScheduler — resource tracking and admission control."""
 
 import time
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from centurion.config import CenturionConfig
-from centurion.core.scheduler import CenturionScheduler, SystemResources, MemoryPressureLevel
-
+from centurion.core.scheduler import CenturionScheduler, MemoryPressureLevel, SystemResources
 from tests.conftest import MockAgentType
 
 
@@ -103,6 +102,7 @@ async def test_can_schedule(_mock_pressure, mock_agent):
 # Probe cache TTL tests (S9 fix)
 # ---------------------------------------------------------------------------
 
+
 class TestProbeCacheTTL:
     def test_probe_system_returns_system_resources(self, scheduler):
         """probe_system returns a SystemResources dataclass."""
@@ -147,6 +147,7 @@ class TestProbeCacheTTL:
 # can_schedule respects hard limits
 # ---------------------------------------------------------------------------
 
+
 class TestCanScheduleHardLimits:
     @patch.object(CenturionScheduler, "_memory_pressure_level", return_value=MemoryPressureLevel.NORMAL)
     def test_can_schedule_respects_hard_limit_zero_means_unlimited(self, _mock_pressure):
@@ -176,6 +177,7 @@ class TestCanScheduleHardLimits:
 # ---------------------------------------------------------------------------
 # available_slots calculation
 # ---------------------------------------------------------------------------
+
 
 class TestAvailableSlots:
     def test_available_slots_with_hard_limit(self):
@@ -217,6 +219,7 @@ class TestAvailableSlots:
 # MemoryPressureLevel enum tests
 # ---------------------------------------------------------------------------
 
+
 class TestMemoryPressureLevel:
     def test_enum_has_normal(self):
         assert MemoryPressureLevel.NORMAL.value == "normal"
@@ -239,6 +242,7 @@ class TestMemoryPressureLevel:
 # ---------------------------------------------------------------------------
 # _memory_pressure_level() tests
 # ---------------------------------------------------------------------------
+
 
 class TestMemoryPressureLevelDetection:
     """Test _memory_pressure_level returns correct enum for sysctl output."""
@@ -294,6 +298,7 @@ class TestMemoryPressureLevelDetection:
 # _ram_available_mb() tests — uses psutil.virtual_memory().available
 # ---------------------------------------------------------------------------
 
+
 class TestRamAvailableMb:
     """Test that _ram_available_mb returns psutil.virtual_memory().available in MB."""
 
@@ -321,6 +326,7 @@ class TestRamAvailableMb:
 # _ram_total_mb() tests — uses psutil.virtual_memory().total
 # ---------------------------------------------------------------------------
 
+
 class TestRamTotalMb:
     """Test that _ram_total_mb returns psutil.virtual_memory().total in MB."""
 
@@ -347,6 +353,7 @@ class TestRamTotalMb:
 # ---------------------------------------------------------------------------
 # _ram_compressor_mb() tests
 # ---------------------------------------------------------------------------
+
 
 class TestRamCompressorMb:
     """Test _ram_compressor_mb reads macOS compressor size via sysctl."""
@@ -386,6 +393,7 @@ class TestRamCompressorMb:
 # _ram_available_conservative_mb() tests
 # ---------------------------------------------------------------------------
 
+
 class TestRamAvailableConservativeMb:
     """Test _ram_available_conservative_mb = available - compressor, clamped to 0."""
 
@@ -410,6 +418,7 @@ class TestRamAvailableConservativeMb:
 # probe_system(force=True) bypasses cache
 # ---------------------------------------------------------------------------
 
+
 class TestProbeForceBypassesCache:
     def test_force_returns_new_object(self, scheduler):
         """probe_system(force=True) returns a fresh object even within TTL."""
@@ -423,6 +432,7 @@ class TestProbeForceBypassesCache:
 # ---------------------------------------------------------------------------
 # Admission gate under memory pressure
 # ---------------------------------------------------------------------------
+
 
 class TestAdmissionGateWithPressure:
     """can_schedule() and available_slots() reject work under memory pressure."""
@@ -477,6 +487,7 @@ class TestAdmissionGateWithPressure:
 # SystemResources new fields
 # ---------------------------------------------------------------------------
 
+
 class TestSystemResourcesNewFields:
     """SystemResources dataclass has ram_available_conservative_mb and ram_compressor_mb."""
 
@@ -502,6 +513,7 @@ class TestSystemResourcesNewFields:
 # ---------------------------------------------------------------------------
 # probe_system() populates new fields
 # ---------------------------------------------------------------------------
+
 
 class TestProbeSystemNewFields:
     """probe_system() populates ram_available_conservative_mb and ram_compressor_mb."""
@@ -537,6 +549,7 @@ class TestProbeSystemNewFields:
 # ---------------------------------------------------------------------------
 # to_dict() includes new fields
 # ---------------------------------------------------------------------------
+
 
 class TestToDictNewFields:
     """to_dict() includes ram_available_conservative_mb and ram_compressor_mb."""
@@ -574,6 +587,7 @@ class TestToDictNewFields:
 # ---------------------------------------------------------------------------
 # psutil edge cases: zero values, very large values
 # ---------------------------------------------------------------------------
+
 
 class TestPsutilEdgeCases:
     """Edge cases for psutil-backed RAM methods."""
@@ -615,6 +629,7 @@ class TestPsutilEdgeCases:
 # recommended_max_agents with hard limit cap
 # ---------------------------------------------------------------------------
 
+
 class TestRecommendedMaxAgentsHardLimit:
     """recommended_max_agents respects max_agents_hard_limit."""
 
@@ -642,6 +657,7 @@ class TestRecommendedMaxAgentsHardLimit:
 # ---------------------------------------------------------------------------
 # can_schedule CPU and memory rejection paths
 # ---------------------------------------------------------------------------
+
 
 class TestCanScheduleResourceRejection:
     """can_schedule rejects when CPU or memory is exhausted."""
@@ -674,6 +690,7 @@ class TestCanScheduleResourceRejection:
 # _ram_available_conservative_mb edge cases
 # ---------------------------------------------------------------------------
 
+
 class TestRamAvailableConservativeEdgeCases:
     """Additional edge cases for conservative RAM estimate."""
 
@@ -695,6 +712,7 @@ class TestRamAvailableConservativeEdgeCases:
 # ---------------------------------------------------------------------------
 # probe_system populates memory_pressure field
 # ---------------------------------------------------------------------------
+
 
 class TestProbeSystemPressureField:
     """probe_system sets the memory_pressure field from _memory_pressure_level."""
