@@ -183,3 +183,15 @@ class CloseableSessionsResponse(BaseModel):
     """Response for the closeable-sessions endpoint."""
     sessions: list[CloseableSessionEntry]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Sentinel
+# ---------------------------------------------------------------------------
+
+class SentinelStatusResponse(BaseModel):
+    """Status of the sentinel service."""
+    enabled: bool
+    running: bool
+    config: dict[str, Any] = Field(default_factory=dict)
+    metrics: dict[str, Any] = Field(default_factory=dict)

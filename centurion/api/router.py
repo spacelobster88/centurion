@@ -26,6 +26,7 @@ from centurion.api.schemas import (
     RaiseLegionRequest,
     ReadinessResponse,
     ScaleRequest,
+    SentinelStatusResponse,
     SubmitBatchRequest,
     SubmitTaskRequest,
     TaskResponse,
@@ -158,6 +159,13 @@ async def readiness(request: Request) -> JSONResponse:
             status="ok",
             subscribers=len(event_bus._subscribers),
             history_size=len(event_bus._history),
+        )
+
+    # --- Sentinel ---
+    sentinel = getattr(engine, "sentinel", None) if engine else None
+    if sentinel is not None:
+        components["sentinel"] = ComponentStatus(
+            status="ok" if sentinel.config.enabled else "ok",
         )
 
     # --- Database ---
@@ -671,4 +679,55 @@ async def list_agent_types(request: Request) -> dict[str, Any]:
             }
             for name, cls in types.items()
         ]
+    }
+
+
+# =========================================================================
+# Sentinel
+# =========================================================================
+
+@router.get("/sentinel", response_model=SentinelStatusResponse)
+async def sentinel_status(request: Request) -> SentinelStatusResponse:
+    """Return sentinel service status and kill metrics."""
+    engine = _engine(request)
+    sentinel = getattr(engine, "sentinel", None)
+    if sentinel is None:
+        return SentinelStatusResponse(
+            enabled=False, running=False, config={}, metrics={},
+        )
+    return SentinelStatusResponse(
+        enabled=sentinel.config.enabled,
+        running=sentinel.is_running,
+        config={
+            "scan_interval_seconds": sentinel.config.scan_interval_seconds,
+            "idle_threshold_seconds": sentinel.config.idle_threshold_seconds,
+            "max_runtime_seconds": sentinel.config.max_runtime_seconds,
+            "dry_run": sentinel.config.dry_run,
+        },
+        metrics=sentinel.metrics.to_dict(),
+    )
+
+
+@router.post("/sentinel/scan")
+async def sentinel_scan(request: Request) -> dict[str, Any]:
+    """Trigger an immediate sentinel scan. Returns kill results."""
+    engine = _engine(request)
+    sentinel = getattr(engine, "sentinel", None)
+    if sentinel is None:
+        raise HTTPException(status_code=503, detail="Sentinel not initialized")
+
+    kills = await sentinel.scan_once()
+    return {
+        "kills": [
+            {
+                "session_id": k.session_id,
+                "session_type": k.session_type,
+                "reason": k.reason,
+                "idle_seconds": round(k.idle_seconds, 1),
+                "runtime_seconds": round(k.runtime_seconds, 1),
+                "dry_run": k.dry_run,
+            }
+            for k in kills
+        ],
+        "total": len(kills),
     }

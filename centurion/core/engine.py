@@ -16,6 +16,8 @@ from centurion.core.century import CenturyConfig
 from centurion.core.events import EventBus
 from centurion.core.legion import Legion, LegionQuota
 from centurion.core.scheduler import CenturionScheduler
+from centurion.core.sentinel import Sentinel, SentinelConfig
+from centurion.core.session_registry import SessionRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +48,24 @@ class Centurion:
         self.event_bus = EventBus(max_history=self.config.event_buffer_size)
         self.legions: dict[str, Legion] = {}
         self.broadcaster = Broadcaster(self)
+        self.session_registry = SessionRegistry()
         self._shutting_down: bool = False
         self._register_default_types()
+
+        # Sentinel service for stale session cleanup
+        sentinel_config = SentinelConfig(
+            scan_interval_seconds=self.config.sentinel_scan_interval,
+            idle_threshold_seconds=self.config.sentinel_idle_threshold,
+            max_runtime_seconds=self.config.sentinel_max_runtime,
+            dry_run=self.config.sentinel_dry_run,
+            enabled=self.config.sentinel_enabled,
+        )
+        self.sentinel = Sentinel(
+            config=sentinel_config,
+            session_registry=self.session_registry,
+            event_bus=self.event_bus,
+        )
+
         logger.info(
             "Engine initialized",
             extra={"config": {"max_agents": self.config.max_agents_hard_limit}},
@@ -202,6 +220,10 @@ class Centurion:
         self._shutting_down = True
         timeout = self.config.shutdown_timeout
         logger.info("shutdown: starting, timeout=%ss", timeout)
+
+        # Phase 0: Stop sentinel
+        if self.sentinel.is_running:
+            await self.sentinel.stop()
 
         # Phase 1: Stop accepting new tasks
         logger.info("shutdown: phase 1 — stop accepting new tasks")

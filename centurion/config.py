@@ -79,6 +79,23 @@ class CenturionConfig:
         default_factory=lambda: int(os.getenv("CENTURION_EVENT_BUFFER_SIZE", "1000"))
     )
 
+    # Sentinel (stale session reaper)
+    sentinel_enabled: bool = field(
+        default_factory=lambda: os.getenv("CENTURION_SENTINEL_ENABLED", "1") != "0"
+    )
+    sentinel_scan_interval: float = field(
+        default_factory=lambda: float(os.getenv("CENTURION_SENTINEL_INTERVAL", "300"))
+    )
+    sentinel_idle_threshold: float = field(
+        default_factory=lambda: float(os.getenv("CENTURION_SENTINEL_IDLE_THRESHOLD", "1800"))
+    )
+    sentinel_max_runtime: float = field(
+        default_factory=lambda: float(os.getenv("CENTURION_SENTINEL_MAX_RUNTIME", "7200"))
+    )
+    sentinel_dry_run: bool = field(
+        default_factory=lambda: os.getenv("CENTURION_SENTINEL_DRY_RUN", "0") == "1"
+    )
+
     # Server
     host: str = "0.0.0.0"
     port: int = field(

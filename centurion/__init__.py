@@ -10,6 +10,7 @@ from centurion.core.events import CenturionEvent, EventBus
 from centurion.core.legion import Legion, LegionQuota
 from centurion.core.legionary import Legionary, LegionaryStatus
 from centurion.core.scheduler import CenturionScheduler
+from centurion.core.sentinel import Sentinel, SentinelConfig
 
 __all__ = [
     "Century",
@@ -25,6 +26,8 @@ __all__ = [
     "LegionaryStatus",
     "ResourceRequirements",
     "ResourceSpec",
+    "Sentinel",
+    "SentinelConfig",
 ]
 
 __version__ = "0.1.0"
