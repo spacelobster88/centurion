@@ -13,10 +13,11 @@ Session priority ordering (from CLAUDE.md):
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 import threading
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 logger = logging.getLogger(__name__)
@@ -208,10 +209,8 @@ class Sentinel:
         self._running = False
         if self._task is not None:
             self._task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._task
-            except asyncio.CancelledError:
-                pass
             self._task = None
         logger.info("Sentinel stopped")
 

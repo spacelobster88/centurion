@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import time
-from unittest.mock import patch
 
 import pytest
 
@@ -17,7 +16,6 @@ from centurion.core.sentinel import (
     _kill_priority,
 )
 from centurion.core.session_registry import SessionRegistry
-
 
 # ---------------------------------------------------------------------------
 # Unit tests: SentinelMetrics
