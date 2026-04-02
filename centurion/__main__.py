@@ -20,6 +20,9 @@ Usage::
     # Start with explicit options
     centurion up --host 0.0.0.0 --port 8100 --max-agents 20
 
+    # Custom port via environment variable
+    CENTURION_PORT=8200 centurion up
+
     # Legacy mode (same as 'up')
     python -m centurion --host 0.0.0.0 --port 8100
 """
@@ -30,6 +33,7 @@ import argparse
 import asyncio
 import json
 import os
+import socket
 import sys
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
@@ -45,6 +49,29 @@ from centurion.api.websocket import websocket_endpoint
 from centurion.config import CenturionConfig
 from centurion.core.engine import Centurion
 from centurion.core.scheduler import CenturionScheduler
+
+
+def _default_port() -> int:
+    """Return the default port from CENTURION_PORT env var, or 8100."""
+    return int(os.getenv("CENTURION_PORT", "8100"))
+
+
+def _check_port_available(host: str, port: int) -> None:
+    """Exit with a clear message if the port is already in use."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind((host if host != "0.0.0.0" else "127.0.0.1", port))
+    except OSError:
+        print(
+            f"\n  ✗ Port {port} is already in use.\n"
+            f"  Try one of:\n"
+            f"    centurion up --port {port + 100}\n"
+            f"    CENTURION_PORT={port + 100} centurion up\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    finally:
+        sock.close()
 
 
 # ---------------------------------------------------------------------------
@@ -349,6 +376,8 @@ def cmd_quickstart(args: argparse.Namespace) -> None:
 
         return quickstart_lifespan
 
+    _check_port_available(args.host, args.port)
+
     app = FastAPI(
         title="Centurion",
         version="0.1.0",
@@ -414,6 +443,8 @@ def cmd_up(args: argparse.Namespace) -> None:
     if args.max_agents:
         os.environ["CENTURION_MAX_AGENTS"] = str(args.max_agents)
 
+    _check_port_available(args.host, args.port)
+
     app = FastAPI(title="Centurion", version="0.1.0", lifespan=lifespan)
     app.include_router(health_router)
     app.include_router(router)
@@ -439,7 +470,7 @@ def main() -> None:
         help="One-click mode: probe hardware, auto-configure, and launch",
     )
     qs_parser.add_argument("--host", default="0.0.0.0")
-    qs_parser.add_argument("--port", type=int, default=8100)
+    qs_parser.add_argument("--port", type=int, default=_default_port())
     qs_parser.add_argument(
         "--agent-type",
         default="claude_cli",
@@ -455,7 +486,7 @@ def main() -> None:
     # centurion up
     up_parser = sub.add_parser("up", help="Start the Centurion server (one-click)")
     up_parser.add_argument("--host", default="0.0.0.0")
-    up_parser.add_argument("--port", type=int, default=8100)
+    up_parser.add_argument("--port", type=int, default=_default_port())
     up_parser.add_argument(
         "--max-agents", type=int, default=0,
         help="Hard limit on concurrent agents (0 = auto from hardware)",
@@ -483,7 +514,7 @@ def main() -> None:
 
     # Legacy: no subcommand = same as 'up'
     parser.add_argument("--host", default="0.0.0.0", dest="legacy_host")
-    parser.add_argument("--port", type=int, default=8100, dest="legacy_port")
+    parser.add_argument("--port", type=int, default=_default_port(), dest="legacy_port")
     parser.add_argument(
         "--quickstart",
         action="store_true",
